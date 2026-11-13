@@ -2,6 +2,8 @@
 
 App para o casal não desanimar da academia: cada um precisa fazer 4 treinos por semana (segunda a sábado), comprovados com foto tirada na hora. Quem não bate a meta recebe uma multa sorteada (R$10 a R$50) e uma punição da roleta.
 
+> Estado do projeto, o que falta e o que fazer para colocar no ar: veja [PROGRESSO.md](./PROGRESSO.md).
+
 É um web app instalável (PWA): abre no Safari do iPhone e vira um ícone na tela inicial, sem Mac e sem App Store.
 
 ## Estrutura
