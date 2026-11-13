@@ -1,0 +1,98 @@
+import type { ExceptionReason } from '@/domain/rules'
+
+export interface Profile {
+  id: string
+  display_name: string
+}
+
+export interface Group {
+  id: string
+  name: string
+  invite_code: string
+  weekly_goal: number
+  fine_min: number
+  fine_max: number
+  sunday_counts: boolean
+  jokers_per_month: number
+  timezone: string
+  starts_on: string
+}
+
+export type GroupRulesUpdate = Pick<
+  Group,
+  'name' | 'weekly_goal' | 'fine_min' | 'fine_max' | 'sunday_counts' | 'jokers_per_month'
+>
+
+export interface Member {
+  group_id: string
+  user_id: string
+  role: 'owner' | 'member'
+  starts_on: string
+  joined_at: string
+  display_name: string
+}
+
+export interface Checkin {
+  id: string
+  group_id: string
+  user_id: string
+  day: string
+  photo_path: string
+  created_at: string
+}
+
+export interface ExceptionDay {
+  id: string
+  group_id: string
+  user_id: string
+  day: string
+  reason: ExceptionReason
+  note: string | null
+  created_at: string
+}
+
+export interface Joker {
+  id: string
+  group_id: string
+  user_id: string
+  week_start: string
+  created_at: string
+}
+
+export interface Punishment {
+  id: string
+  group_id: string
+  kind: string
+  description: string
+  active: boolean
+  created_at: string
+}
+
+export interface Week {
+  id: string
+  group_id: string
+  week_start: string
+  closed_at: string
+  fine_amount: number | null
+  punishment_kind: string | null
+  punishment_text: string | null
+}
+
+export interface WeekResult {
+  week_id: string
+  group_id: string
+  user_id: string
+  week_start: string
+  base_goal: number
+  exception_days: number
+  goal: number
+  checkins: number
+  used_joker: boolean
+  met: boolean
+  owes: boolean
+  fine_amount: number
+  punishment_text: string | null
+  paid_at: string | null
+  paid_marked_by: string | null
+  task_done_at: string | null
+}
