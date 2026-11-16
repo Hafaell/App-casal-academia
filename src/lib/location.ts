@@ -31,3 +31,12 @@ export function getPosition(): Promise<Position> {
   })
 }
 
+/** Acompanha a posição enquanto a tela estiver aberta. Devolve a função para parar. */
+export function watchPosition(onChange: (p: Position) => void, onError: (err: GeolocationPositionError) => void): () => void {
+  if (!('geolocation' in navigator)) {
+    onError({ code: 2, message: 'sem geolocalização' } as GeolocationPositionError)
+    return () => {}
+  }
+  const id = navigator.geolocation.watchPosition((p) => onChange(toPosition(p)), onError, OPTIONS)
+  return () => navigator.geolocation.clearWatch(id)
+}
