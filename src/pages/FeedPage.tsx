@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useGroup } from '@/app/GroupProvider'
 import { Avatar, Button, Card, EmptyState, PageHeader, PhotoViewer, Spinner, memberColor, useToast } from '@/components/ui'
+import { formatDistance } from '@/domain/geo'
 import { useCheckins, useDeleteCheckin, useExceptions, useJokers, usePhotoUrls, useWeekResults, useWeeks } from '@/data/queries'
 import type { Checkin, ExceptionDay, Joker, Week, WeekResult } from '@/data/types'
 import { addDays, dayMonth, localDate, localTime, weekRange, weekdayShort } from '@/domain/dates'
@@ -111,6 +112,12 @@ function CheckinCard({ checkin, url, onOpen }: { checkin: Checkin; url?: string;
           <p className="text-xs text-muted">
             {weekdayShort(checkin.day)} {dayMonth(checkin.day)} · {localTime(checkin.created_at, group.timezone)}
           </p>
+          {checkin.gym_name && (
+            <p className="text-xs text-muted">
+              📍 {checkin.gym_name}
+              {checkin.distance_m !== null && ` · ${formatDistance(checkin.distance_m)}`}
+            </p>
+          )}
         </div>
         {canDelete && (
           <button

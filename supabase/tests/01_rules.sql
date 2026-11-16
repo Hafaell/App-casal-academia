@@ -58,6 +58,9 @@ begin
   assert (select count(*) from public.punishments where group_id = gid) = 8, 'roleta inicial com 8 punições';
   assert (select weekly_goal from public.groups where id = gid) = 4, 'meta padrão 4';
   assert (select extract(isodow from starts_on) from public.groups where id = gid) = 1, 'grupo começa numa segunda';
+  assert (select require_location from public.groups where id = gid), 'localização exigida por padrão';
+  -- Estes testes cobrem as outras regras; a localização tem testes próprios (02_location.sql).
+  update public.groups set require_location = false where id = gid;
   assert (select starts_on >= public.monday_of(public.local_today(gid)) from public.groups where id = gid), 'grupo começa nesta semana ou na próxima';
 end $$;
 

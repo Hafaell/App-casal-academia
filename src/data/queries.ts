@@ -6,6 +6,7 @@ import type {
   ExceptionDay,
   Group,
   GroupRulesUpdate,
+  Gym,
   Joker,
   Member,
   Punishment,
@@ -29,6 +30,7 @@ export const keys = {
   weeks: (gid: string) => ['weeks', gid] as const,
   results: (gid: string) => ['results', gid] as const,
   punishments: (gid: string) => ['punishments', gid] as const,
+  gyms: (gid: string) => ['gyms', gid] as const,
 }
 
 // ---------------------------------------------------------------------
@@ -157,6 +159,14 @@ export function usePunishments(gid: string) {
   })
 }
 
+export function useGyms(gid: string) {
+  return useQuery({
+    queryKey: keys.gyms(gid),
+    queryFn: async () =>
+      must(await supabase.from('gyms').select('*').eq('group_id', gid).order('created_at')) as Gym[],
+  })
+}
+
 /** URLs assinadas (válidas por 1 hora) para as fotos privadas. */
 export function usePhotoUrls(paths: string[]) {
   const sorted = [...new Set(paths)].sort()
@@ -183,13 +193,23 @@ function useInvalidate() {
     Promise.all(prefixes.map((p) => qc.invalidateQueries({ queryKey: [p] })))
 }
 
+export interface CheckinInput {
+  photo: Blob
+  /** Posição no momento da foto. O banco escolhe a academia e confere os 300 m. */
+  position: { lat: number; lng: number; accuracy: number } | null
+}
+
 export function useCreateCheckin(gid: string, userId: string) {
   const invalidate = useInvalidate()
   return useMutation({
-    mutationFn: async (photo: Blob) => {
+    mutationFn: async ({ photo, position }: CheckinInput) => {
       const path = `${gid}/${userId}/${crypto.randomUUID()}.jpg`
       must(await supabase.storage.from(PHOTO_BUCKET).upload(path, photo, { contentType: 'image/jpeg' }))
-      const res = await supabase.from('checkins').insert({ group_id: gid, photo_path: path })
+      const res = await supabase.from('checkins').insert({
+        group_id: gid,
+        photo_path: path,
+        ...(position ? { lat: position.lat, lng: position.lng, accuracy_m: position.accuracy } : {}),
+      })
       if (res.error) {
         // Não deixa foto órfã no armazenamento se o check-in foi recusado.
         await supabase.storage.from(PHOTO_BUCKET).remove([path])
@@ -287,6 +307,32 @@ export function useDeletePunishment() {
   return useMutation({
     mutationFn: async (id: string) => must(await supabase.from('punishments').delete().eq('id', id)),
     onSuccess: () => invalidate('punishments'),
+  })
+}
+
+export function useAddGym(gid: string) {
+  const invalidate = useInvalidate()
+  return useMutation({
+    mutationFn: async (g: { name: string; address?: string; place_id?: string; lat: number; lng: number }) =>
+      must(
+        await supabase.from('gyms').insert({
+          group_id: gid,
+          name: g.name.trim().slice(0, 80),
+          address: g.address?.slice(0, 200) || null,
+          place_id: g.place_id || null,
+          lat: g.lat,
+          lng: g.lng,
+        }),
+      ),
+    onSuccess: () => invalidate('gyms'),
+  })
+}
+
+export function useRemoveGym() {
+  const invalidate = useInvalidate()
+  return useMutation({
+    mutationFn: async (id: string) => must(await supabase.from('gyms').delete().eq('id', id)),
+    onSuccess: () => invalidate('gyms'),
   })
 }
 
