@@ -5,9 +5,9 @@ import { Button, useToast } from '@/components/ui'
 import { useCreateCheckin, useGyms } from '@/data/queries'
 import type { Gym } from '@/data/types'
 import { dayMonth, localTime, weekdayShort } from '@/domain/dates'
-import { GYM_RADIUS_M, checkLocation, formatDistance, type LocationCheck } from '@/domain/geo'
+import { GYM_RADIUS_M, MAX_ACCURACY_M, checkLocation, formatDistance, type LocationCheck } from '@/domain/geo'
 import { loadImage, prepareCheckinPhoto } from '@/lib/image'
-import { locationErrorMessage, watchPosition, type Position } from '@/lib/location'
+import { getPosition, locationErrorMessage, type Position } from '@/lib/location'
 import { errorMessage } from '@/lib/supabase'
 
 type Facing = 'user' | 'environment'
@@ -28,30 +28,44 @@ export function CheckinPage() {
   const [cameraError, setCameraError] = useState('')
   const [photo, setPhoto] = useState<{ blob: Blob; url: string; position: Position | null } | null>(null)
   const [busy, setBusy] = useState(false)
-  const [position, setPosition] = useState<Position | null>(null)
+  const [locating, setLocating] = useState(false)
+  // Resultado da última verificação (só existe depois de tocar para tirar a foto).
+  const [check, setCheck] = useState<LocationCheck<Gym> | null>(null)
   const [gpsError, setGpsError] = useState('')
 
   const required = group.require_location
-  const check: LocationCheck<Gym> | null = position && gyms.data ? checkLocation(position, gyms.data) : null
-  const locationOk = !required || check?.status === 'ok'
+  // Sem academia cadastrada nem adianta abrir o GPS.
+  const noGym = required && gyms.data?.length === 0
+  const canShoot = !noGym && !gyms.isLoading && !locating
 
-  const stamp = () => {
-    const where = check?.status === 'ok' ? check.place.name : group.name
-    return `${weekdayShort(today)} ${dayMonth(today)} · ${localTime(new Date(), group.timezone)} · ${where}`
+  const stamp = (where: string) =>
+    `${weekdayShort(today)} ${dayMonth(today)} · ${localTime(new Date(), group.timezone)} · ${where}`
+
+  /**
+   * Lê o GPS uma única vez, no momento da foto. Se a primeira leitura vier imprecisa
+   * (comum logo que o GPS acorda), tenta mais uma vez antes de desistir.
+   * Devolve null quando a foto não pode ser usada.
+   */
+  async function locate(): Promise<{ position: Position | null; where: string } | null> {
+    setLocating(true)
+    setGpsError('')
+    setCheck(null)
+    try {
+      let position = await getPosition()
+      if (position.accuracy > MAX_ACCURACY_M) position = await getPosition()
+      const result = checkLocation(position, gyms.data ?? [])
+      setCheck(result)
+      if (result.status === 'ok') return { position, where: result.place.name }
+      if (required) return null
+      return { position, where: group.name }
+    } catch (err) {
+      setGpsError(locationErrorMessage(err))
+      // Com a regra desligada, a foto vale mesmo sem localização.
+      return required ? null : { position: null, where: group.name }
+    } finally {
+      setLocating(false)
+    }
   }
-
-  // GPS ligado enquanto a tela estiver aberta: o aviso de distância atualiza sozinho.
-  useEffect(
-    () =>
-      watchPosition(
-        (p) => {
-          setPosition(p)
-          setGpsError('')
-        },
-        (err) => setGpsError(locationErrorMessage(err)),
-      ),
-    [],
-  )
 
   // Liga a câmera ao vivo. Sem câmera ao vivo não há como escolher foto antiga.
   useEffect(() => {
@@ -96,8 +110,19 @@ export function CheckinPage() {
     if (!video || !video.videoWidth) return
     setBusy(true)
     try {
-      const blob = await prepareCheckinPhoto(video, video.videoWidth, video.videoHeight, stamp())
-      setPhoto({ blob, url: URL.createObjectURL(blob), position })
+      // Congela o quadro no instante do toque e só então consulta o GPS.
+      const frame = document.createElement('canvas')
+      frame.width = video.videoWidth
+      frame.height = video.videoHeight
+      frame.getContext('2d')?.drawImage(video, 0, 0)
+      video.pause()
+      const located = await locate()
+      if (!located) {
+        await video.play().catch(() => undefined)
+        return
+      }
+      const blob = await prepareCheckinPhoto(frame, frame.width, frame.height, stamp(located.where))
+      setPhoto({ blob, url: URL.createObjectURL(blob), position: located.position })
     } catch (err) {
       toast(errorMessage(err), 'error')
     } finally {
@@ -110,20 +135,18 @@ export function CheckinPage() {
     const file = e.target.files?.[0]
     e.target.value = ''
     if (!file) return
-    if (!locationOk) {
-      toast('Você precisa estar na academia para registrar o treino.', 'error')
-      return
-    }
     if (Date.now() - file.lastModified > MAX_FILE_AGE_MS) {
       toast('A foto precisa ser tirada agora, na academia.', 'error')
       return
     }
     setBusy(true)
     try {
+      const located = await locate()
+      if (!located) return
       const img = await loadImage(file)
-      const blob = await prepareCheckinPhoto(img, img.naturalWidth, img.naturalHeight, stamp())
+      const blob = await prepareCheckinPhoto(img, img.naturalWidth, img.naturalHeight, stamp(located.where))
       URL.revokeObjectURL(img.src)
-      setPhoto({ blob, url: URL.createObjectURL(blob), position })
+      setPhoto({ blob, url: URL.createObjectURL(blob), position: located.position })
     } catch (err) {
       toast(errorMessage(err), 'error')
     } finally {
@@ -133,9 +156,8 @@ export function CheckinPage() {
 
   function send() {
     if (!photo) return
-    // A posição vai junto com a foto; o banco confere de novo os 300 m.
-    const pos = photo.position ?? position
-    if (required && !pos) return toast('Ainda sem localização. Espere o GPS e tente de novo.', 'error')
+    // A posição lida no momento da foto vai junto; o banco confere de novo os 300 m.
+    const pos = photo.position
     const sent = pos ? { lat: pos.lat, lng: pos.lng, accuracy: pos.accuracy } : null
     create.mutate({ photo: photo.blob, position: sent }, {
       onSuccess: () => {
@@ -156,7 +178,7 @@ export function CheckinPage() {
         <span className="w-16" />
       </div>
 
-      <LocationBanner required={required} check={check} position={position} gpsError={gpsError} loadingGyms={gyms.isLoading} />
+      <LocationBanner required={required} noGym={noGym} locating={locating} check={check} gpsError={gpsError} />
 
       <div className="relative flex flex-1 items-center justify-center overflow-hidden">
         {photo ? (
@@ -165,8 +187,8 @@ export function CheckinPage() {
           <div className="max-w-xs space-y-4 px-6 text-center">
             <p className="text-white/80">{cameraError}</p>
             <label
-              aria-disabled={!locationOk}
-              className={`inline-flex min-h-11 cursor-pointer items-center justify-center rounded-xl bg-accent px-5 font-semibold text-accent-ink ${locationOk ? '' : 'pointer-events-none opacity-40'}`}
+              aria-disabled={!canShoot}
+              className={`inline-flex min-h-11 cursor-pointer items-center justify-center rounded-xl bg-accent px-5 font-semibold text-accent-ink ${canShoot ? '' : 'pointer-events-none opacity-40'}`}
             >
               Abrir câmera do iPhone
               <input type="file" accept="image/*" capture="environment" className="hidden" onChange={onFile} />
@@ -183,6 +205,9 @@ export function CheckinPage() {
               style={facing === 'user' ? { transform: 'scaleX(-1)' } : undefined}
             />
             {!cameraReady && <p className="absolute text-sm text-white/60">Abrindo a câmera…</p>}
+            {locating && (
+              <p className="absolute rounded-xl bg-black/70 px-4 py-2 text-sm">📍 Verificando sua localização…</p>
+            )}
           </>
         )}
       </div>
@@ -203,7 +228,7 @@ export function CheckinPage() {
             <button
               aria-label="Tirar foto"
               onClick={capture}
-              disabled={!cameraReady || busy || !locationOk}
+              disabled={!cameraReady || busy || !canShoot}
               className="h-[76px] w-[76px] rounded-full border-4 border-white bg-white/20 transition active:scale-95 disabled:opacity-40"
             />
             <button
@@ -220,24 +245,26 @@ export function CheckinPage() {
   )
 }
 
-/** Faixa com o estado do GPS: dentro do raio, longe, sem academia ou buscando. */
+/** Faixa com o resultado da verificação. Antes da foto, só explica o que vai acontecer. */
 function LocationBanner({
   required,
+  noGym,
+  locating,
   check,
-  position,
   gpsError,
-  loadingGyms,
 }: {
   required: boolean
+  noGym: boolean
+  locating: boolean
   check: LocationCheck<Gym> | null
-  position: Position | null
   gpsError: string
-  loadingGyms: boolean
 }) {
-  let tone: 'ok' | 'warn' | 'wait' = 'wait'
-  let text: ReactNode = 'Buscando sua localização…'
+  let tone: 'ok' | 'warn' | 'info' = 'info'
+  let text: ReactNode = required
+    ? `Ao tirar a foto, o app confere se você está a até ${GYM_RADIUS_M} m da academia.`
+    : null
 
-  if (check?.status === 'no-gym') {
+  if (noGym) {
     tone = 'warn'
     text = (
       <>
@@ -247,11 +274,11 @@ function LocationBanner({
         </Link>
       </>
     )
-  } else if (gpsError && !position) {
+  } else if (locating) {
+    text = 'Verificando sua localização…'
+  } else if (gpsError) {
     tone = 'warn'
     text = gpsError
-  } else if (!position || loadingGyms) {
-    tone = 'wait'
   } else if (check?.status === 'ok') {
     tone = 'ok'
     text = `📍 ${check.place.name} · ${formatDistance(check.distance)}`
@@ -259,17 +286,18 @@ function LocationBanner({
     tone = 'warn'
     text = `Você está a ${formatDistance(check.distance)} de ${check.place.name}. Precisa estar a até ${GYM_RADIUS_M} m.`
   } else if (check?.status === 'weak-signal') {
-    tone = 'wait'
-    text = `GPS impreciso (±${Math.round(check.accuracy)} m). Aguarde alguns segundos…`
+    tone = 'warn'
+    text = `GPS impreciso (±${Math.round(check.accuracy)} m). Vá para perto de uma janela e tire a foto de novo.`
   }
 
+  if (!text) return null
   // Com a regra desligada, o aviso só informa (não bloqueia).
-  if (!required && tone === 'warn') tone = 'wait'
+  if (!required && tone === 'warn') tone = 'info'
 
   const styles = {
     ok: 'bg-accent/90 text-accent-ink',
     warn: 'bg-danger/90 text-white',
-    wait: 'bg-white/10 text-white/80',
+    info: 'bg-white/10 text-white/80',
   }
   return (
     <div role="status" className={`mx-4 mb-2 rounded-xl px-3 py-2 text-center text-sm ${styles[tone]}`}>
