@@ -2,7 +2,9 @@
 
 Este arquivo é o ponto de partida de toda nova sessão. Ele diz onde o projeto está, o que falta e para onde queremos ir.
 
-Última atualização: 13/11/2026 · Branch de trabalho: `develop` · Versão do app: 0.1.0
+Última atualização: 15/11/2026 · Branch de trabalho: `develop` · Versão do app: 0.1.0
+
+Instruções para sessões do Claude Code ficam no [CLAUDE.md](./CLAUDE.md).
 
 Legenda de confiança nas afirmações não óbvias: **[Certa]**, **[Provável]**, **[Adivinhando]**.
 
@@ -24,7 +26,7 @@ App para o casal (Rafael e a namorada) não desanimar da academia.
 
 ## 2. Onde estamos agora
 
-**Primeira versão escrita, testada localmente e enviada para `develop`. Ainda não foi colocada no ar.**
+**Primeira versão escrita e testada. O Supabase de produção está criado, configurado e validado (15/11/2026). Falta publicar na Vercel e instalar no iPhone.**
 
 ### Pronto
 
@@ -41,22 +43,24 @@ App para o casal (Rafael e a namorada) não desanimar da academia.
 | Exceções e coringa do mês | Feito |
 | Grupo e regras: meta, faixa de multa, domingo, coringas por mês, convite, nome | Feito |
 | Banco com regras e segurança (RLS) em todas as tabelas e nas fotos | Feito |
-| Fechamento automático da semana (função no banco + agendamento + rede de segurança no app) | Escrito, **não testado no Supabase real** |
+| Fechamento automático da semana (função no banco + agendamento + rede de segurança no app) | Job agendado e ativo no Supabase real; **o primeiro fechamento real ainda não aconteceu** |
 | PWA: manifesto, ícones, service worker | Gerado no build, **não testado num iPhone real** |
+| Projeto Supabase de produção (`treino-a-dois`, São Paulo) com as 3 migrações | Feito em 15/11/2026 |
 
 ### Como foi verificado
 
-- Regras do banco: testes em Postgres local imitando o Supabase (`npm run test:db`). Passaram.
+- Regras do banco: testes em Postgres local imitando o Supabase (`npm run test:db`). Passaram em 13/11. Não foram repetidos em 15/11 porque a máquina atual não tem `psql`.
 - Regras do app: 23 testes (`npm test`). Passaram.
-- `npm run typecheck` e `npm run build` passam.
-- Telas: abertas no Chromium em tamanho de iPhone com a API simulada, sem erros no console.
+- `npm run typecheck` e `npm run build` passam (Node 26, npm 11).
+- **Supabase real (15/11/2026):** `npm run test:e2e` passou nos 53 passos: cadastro e login, perfil criado pelo gatilho, grupo e convite, envio e leitura de foto pelo Storage, check-in com dia e usuário definidos pelo servidor, bloqueio de domingo, um check-in por dia, exceção, coringa, edição de regras e roleta, `catch_up_weeks`, e o isolamento (quem não é do grupo não vê dados nem fotos; `close_week` não é exposta).
+- Consulta no banco confirmou: 9 tabelas com RLS ligado em todas, bucket `checkins` privado com 3 policies, 20 policies nas tabelas, job `fechar-semanas` ativo (`59 * * * *`).
+- Telas: build de produção servido em `localhost` contra o Supabase real. Cadastro, criação de grupo, Início, Feed, Histórico, Caixinha, Roleta, Grupo e regras, Exceções e Sequência abriram sem erro no console. Os dados de teste foram apagados.
 
 ### Não verificado ainda
 
-- Câmera ao vivo no iPhone dentro do app instalado. **[Provável]** que funcione no iOS 16.4 ou mais novo; só dá para confirmar num aparelho real.
-- O agendamento `pg_cron` no Supabase real (a extensão não existe no Postgres de teste, então a migração `..._schedule.sql` foi pulada nos testes).
-- Cadastro e login com um projeto Supabase de verdade.
-- Envio e leitura das fotos pelo Storage real.
+- Câmera ao vivo no iPhone dentro do app instalado. **[Provável]** que funcione no iOS 16.4 ou mais novo; só dá para confirmar num aparelho real. A tela de check-in não foi exercitada no computador (o teste enviou a foto direto pela API).
+- O primeiro fechamento real pelo `pg_cron` (domingo às 23h59). O job existe e está ativo, mas ainda não fechou nenhuma semana de verdade.
+- O app publicado na Vercel e instalado no iPhone.
 
 ---
 
@@ -66,18 +70,22 @@ Estes passos dependem de contas e acessos seus. Na ordem:
 
 ### A. Supabase (banco, login, fotos)
 
-- [ ] Criar conta e um projeto em supabase.com (plano gratuito basta). Anotar o **Project URL** e a **anon key** (Project Settings > API).
-- [ ] Em **Database > Extensions**, ativar `pg_cron`.
-- [ ] Rodar as 3 migrações de `supabase/migrations/`, **em ordem**, no SQL Editor (ou via CLI: `npx supabase init`, `npx supabase link --project-ref SEU_REF`, `npx supabase db push`).
-- [ ] Em **Authentication > Sign In / Providers > Email**, decidir sobre **Confirm email**. Para só vocês dois, o mais prático é desligar. Se ficar ligado, cada um precisa clicar no link do e-mail antes do primeiro login.
-- [ ] Em **Authentication > URL Configuration**, colocar o endereço da Vercel em *Site URL* depois do deploy (só importa se mantiver a confirmação por e-mail).
-- [ ] Conferir em **Database > Cron Jobs** que o job `fechar-semanas` existe.
+Feito em 15/11/2026. Projeto `treino-a-dois` (ref `hyxvesqvvhueaigclpbl`, São Paulo), na organização "Hafael".
+
+- [x] Projeto criado no plano gratuito. URL e anon key gravadas no `.env.local` (fora do git).
+- [x] `pg_cron` ativado (a própria migração de agendamento cria a extensão).
+- [x] As 3 migrações aplicadas, em ordem, pelo SQL Editor.
+- [x] **Confirm email desligado.** O cadastro já entra direto. Para religar: Authentication > Sign In / Providers.
+- [ ] Em **Authentication > URL Configuration**, colocar o endereço da Vercel em *Site URL* depois do deploy (só importa se religar a confirmação por e-mail ou usar recuperação de senha).
+- [x] Job `fechar-semanas` conferido: existe e está ativo.
+
+A senha do banco foi gerada pelo painel e não foi guardada. Se precisar (CLI ou `psql`), redefina em Project Settings > Database.
 
 ### B. Vercel (hospedagem)
 
-- [ ] Criar conta na Vercel e importar o repositório `Hafaell/App-casal-academia`.
-- [ ] Escolher a branch de produção (ver decisão pendente sobre a `main`, seção 6).
-- [ ] Cadastrar as variáveis `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY`.
+- [ ] Criar conta na Vercel (entrar com o GitHub) e importar o repositório `Hafaell/App-casal-academia`.
+- [ ] Escolher a branch de produção. O repositório já tem `main`, hoje igual à `develop`.
+- [ ] Cadastrar as variáveis `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY` (os valores estão no `.env.local`).
 - [ ] Fazer o deploy. O `vercel.json` já redireciona as rotas para o app.
 
 ### C. iPhone (instalar como app)
@@ -151,7 +159,8 @@ npm run dev        # desenvolvimento
 npm test           # regras do app
 npm run typecheck
 npm run build
-DATABASE_URL=postgres://postgres@localhost:5432/postgres npm run test:db   # precisa de um Postgres VAZIO
+npm run test:e2e   # ponta a ponta contra o Supabase real do .env.local (cria e limpa dados de teste)
+DATABASE_URL=postgres://postgres@localhost:5432/postgres npm run test:db   # precisa de psql e de um Postgres VAZIO
 ```
 
 ---
@@ -160,7 +169,8 @@ DATABASE_URL=postgres://postgres@localhost:5432/postgres npm run test:db   # pre
 
 ### Prioridade 1: pôr no ar e validar
 
-- [ ] Seção 3 inteira (contas, migrações, deploy, instalação no iPhone).
+- [x] Seção 3A: Supabase criado, migrado e validado.
+- [ ] Seções 3B a 3E: deploy na Vercel, instalação no iPhone, primeiro uso e teste real.
 - [ ] Testar a câmera no iPhone real, no app instalado e também no Safari. Se `getUserMedia` falhar no modo instalado, o plano B (câmera nativa via `<input capture>`) já existe, mas só confere a idade do arquivo.
 - [ ] Confirmar que o `pg_cron` fecha a semana no domingo às 23h59 de Brasília. O job roda no minuto 59 de cada hora e a função só fecha quando já passou das 23h59 do domingo no fuso do grupo; verificar o primeiro fechamento real.
 - [ ] Ajustar o que aparecer no uso real (texto, tamanhos, fluxo).
@@ -204,7 +214,8 @@ O banco já guarda regras por grupo, então a base existe. Falta:
 | Registrar a localização da academia | **Não**; a foto tem carimbo de dia, hora e grupo | Vale a pena? |
 | Recompensa quando os dois batem a meta | **Não** existe | Ex.: 4 semanas seguidas dão um prêmio da caixinha |
 | Nome do app | "Treino a Dois" (provisório) | Definir; trocar em `vite.config.ts`, `index.html` e `public/favicon.svg` |
-| Branch `main` | O repositório só tem `develop` | Criar `main` para produção e abrir PR de `develop`? |
+| Branch `main` | Existe e está igual à `develop` | Usar `main` como produção na Vercel e levar `develop` por PR? |
+| Confirmação de e-mail no cadastro | **Desligada** (decidido em 15/11/2026, para o uso do casal) | Religar se abrir para amigos |
 
 ---
 
@@ -233,7 +244,9 @@ O banco já guarda regras por grupo, então a base existe. Falta:
 
 ```
 PROGRESSO.md              este arquivo
+CLAUDE.md                 instruções e contexto para o Claude Code
 README.md                 guia de instalação e decisões provisórias
+scripts/e2e-supabase.mjs  teste de ponta a ponta contra o Supabase real
 src/domain/               regras puras e testes (datas, meta, exceções, sequência)
 src/data/                 consultas ao Supabase (React Query) e tipos
 src/app/                  login e grupo atual (contextos)

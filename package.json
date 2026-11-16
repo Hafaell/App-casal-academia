@@ -10,7 +10,8 @@
     "typecheck": "tsc -b",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:db": "bash supabase/tests/run.sh"
+    "test:db": "bash supabase/tests/run.sh",
+    "test:e2e": "node scripts/e2e-supabase.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.119.0",
