@@ -26,7 +26,7 @@ App para o casal (Rafael e a namorada) não desanimar da academia.
 
 ## 2. Onde estamos agora
 
-**Primeira versão escrita e testada. O Supabase de produção está criado, configurado e validado (15/11/2026). Falta publicar na Vercel e instalar no iPhone.**
+**No ar desde 15/11/2026 em https://treino-a-dois-theta.vercel.app, com o Supabase de produção criado, configurado e validado. Falta instalar no iPhone e fazer o primeiro uso.**
 
 ### Pronto
 
@@ -46,6 +46,7 @@ App para o casal (Rafael e a namorada) não desanimar da academia.
 | Fechamento automático da semana (função no banco + agendamento + rede de segurança no app) | Job agendado e ativo no Supabase real; **o primeiro fechamento real ainda não aconteceu** |
 | PWA: manifesto, ícones, service worker | Gerado no build, **não testado num iPhone real** |
 | Projeto Supabase de produção (`treino-a-dois`, São Paulo) com as 3 migrações | Feito em 15/11/2026 |
+| Publicação na Vercel (projeto `treino-a-dois`, time `hafael1`, plano Hobby) | Feito em 15/11/2026, pela CLI |
 
 ### Como foi verificado
 
@@ -60,7 +61,7 @@ App para o casal (Rafael e a namorada) não desanimar da academia.
 
 - Câmera ao vivo no iPhone dentro do app instalado. **[Provável]** que funcione no iOS 16.4 ou mais novo; só dá para confirmar num aparelho real. A tela de check-in não foi exercitada no computador (o teste enviou a foto direto pela API).
 - O primeiro fechamento real pelo `pg_cron` (domingo às 23h59). O job existe e está ativo, mas ainda não fechou nenhuma semana de verdade.
-- O app publicado na Vercel e instalado no iPhone.
+- O app instalado no iPhone. O endereço publicado foi conferido só pelo computador: páginas, manifesto, service worker e ícones respondem, e a tela de login abre sem erro no console.
 
 ---
 
@@ -76,22 +77,25 @@ Feito em 15/11/2026. Projeto `treino-a-dois` (ref `hyxvesqvvhueaigclpbl`, São P
 - [x] `pg_cron` ativado (a própria migração de agendamento cria a extensão).
 - [x] As 3 migrações aplicadas, em ordem, pelo SQL Editor.
 - [x] **Confirm email desligado.** O cadastro já entra direto. Para religar: Authentication > Sign In / Providers.
-- [ ] Em **Authentication > URL Configuration**, colocar o endereço da Vercel em *Site URL* depois do deploy (só importa se religar a confirmação por e-mail ou usar recuperação de senha).
+- [x] *Site URL* em **Authentication > URL Configuration** aponta para `https://treino-a-dois-theta.vercel.app`.
 - [x] Job `fechar-semanas` conferido: existe e está ativo.
 
 A senha do banco foi gerada pelo painel e não foi guardada. Se precisar (CLI ou `psql`), redefina em Project Settings > Database.
 
 ### B. Vercel (hospedagem)
 
-- [ ] Criar conta na Vercel (entrar com o GitHub) e importar o repositório `Hafaell/App-casal-academia`.
-- [ ] Escolher a branch de produção. O repositório já tem `main`, hoje igual à `develop`.
-- [ ] Cadastrar as variáveis `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY` (os valores estão no `.env.local`).
-- [ ] Fazer o deploy. O `vercel.json` já redireciona as rotas para o app.
+Feito em 15/11/2026. Endereço de produção: **https://treino-a-dois-theta.vercel.app**
+
+- [x] Conta na Vercel criada com o GitHub (usuário `hafaell`, time `hafael1`).
+- [x] Projeto `treino-a-dois` criado e publicado **pela CLI**, a partir da pasta local (`npx vercel deploy --prod`).
+- [x] Variáveis `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY` cadastradas em Production e Preview.
+- [ ] **Ligar o repositório do GitHub ao projeto** para publicar sozinho a cada push. Hoje não está ligado: falta instalar o aplicativo da Vercel no GitHub (em vercel.com/new > GitHub > Install) e depois rodar `npx vercel git connect`. Enquanto isso, cada atualização precisa de um `npx vercel deploy --prod`.
+- [ ] Escolher a branch de produção quando ligar o GitHub. O repositório já tem `main`, hoje igual à `develop`.
 
 ### C. iPhone (instalar como app)
 
 - [ ] iPhone com **iOS 16.4 ou mais novo** **[Certa]** (necessário para notificações e PWA completo; a instalação em si funciona em versões um pouco mais antigas).
-- [ ] Abrir o endereço da Vercel no **Safari** (precisa ser o Safari, não o Chrome do iPhone).
+- [ ] Abrir **https://treino-a-dois-theta.vercel.app** no **Safari** (precisa ser o Safari, não o Chrome do iPhone).
 - [ ] Compartilhar > **Adicionar à Tela de Início**.
 - [ ] Abrir pelo **ícone da tela inicial**, não pelo Safari. Só assim o app roda em tela cheia.
 - [ ] No primeiro check-in, permitir o acesso à câmera. Se negar sem querer: Ajustes > Safari > Câmera (ou Ajustes > o app).
@@ -170,7 +174,9 @@ DATABASE_URL=postgres://postgres@localhost:5432/postgres npm run test:db   # pre
 ### Prioridade 1: pôr no ar e validar
 
 - [x] Seção 3A: Supabase criado, migrado e validado.
-- [ ] Seções 3B a 3E: deploy na Vercel, instalação no iPhone, primeiro uso e teste real.
+- [x] Seção 3B: publicado na Vercel.
+- [ ] Seções 3C a 3E: instalação no iPhone, primeiro uso e teste real.
+- [ ] Ligar o GitHub à Vercel para publicação automática (seção 3B).
 - [ ] Testar a câmera no iPhone real, no app instalado e também no Safari. Se `getUserMedia` falhar no modo instalado, o plano B (câmera nativa via `<input capture>`) já existe, mas só confere a idade do arquivo.
 - [ ] Confirmar que o `pg_cron` fecha a semana no domingo às 23h59 de Brasília. O job roda no minuto 59 de cada hora e a função só fecha quando já passou das 23h59 do domingo no fuso do grupo; verificar o primeiro fechamento real.
 - [ ] Ajustar o que aparecer no uso real (texto, tamanhos, fluxo).

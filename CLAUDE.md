@@ -41,9 +41,11 @@ Antes de dizer que algo está pronto, rode `npm test`, `npm run typecheck` e `np
 | --- | --- |
 | Supabase | projeto `treino-a-dois`, ref `hyxvesqvvhueaigclpbl`, região São Paulo (`sa-east-1`), organização "Hafael", plano gratuito |
 | URL da API | `https://hyxvesqvvhueaigclpbl.supabase.co` |
-| Hospedagem | Vercel (ver o estado no PROGRESSO.md) |
+| Hospedagem | Vercel, projeto `treino-a-dois`, time `hafael1` (plano Hobby). Produção: `https://treino-a-dois-theta.vercel.app` |
 | Repositório | `Hafaell/App-casal-academia`, branches `develop` e `main` |
 
+- **Publicar:** `npx vercel deploy --prod` na raiz do projeto. O GitHub ainda **não** está ligado à Vercel, então um push não publica nada sozinho. A CLI já está logada nesta máquina e a pasta `.vercel/` (fora do git) guarda o vínculo com o projeto.
+- As variáveis `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY` estão cadastradas na Vercel em Production e Preview, como tipo `config` (são públicas por desenho).
 - `.env.local` (fora do git) guarda `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY`. A chave anon é pública por desenho; a `service_role` nunca entra no projeto nem no front-end.
 - A mesma organização do Supabase tem outro projeto, "Financeiro", que **não é deste app**. Não mexa nele.
 - As migrações foram aplicadas **pelo SQL Editor do painel**, não pela CLI. Por isso a tabela de controle da CLI (`supabase_migrations.schema_migrations`) não existe: um `supabase db push` tentaria aplicar tudo de novo. Para migrações novas, use o SQL Editor ou registre as antigas antes com `supabase migration repair`.
@@ -54,7 +56,7 @@ Antes de dizer que algo está pronto, rode `npm test`, `npm run typecheck` e `np
 ## Ambiente desta máquina
 
 - Windows 11, Node 26 e npm 11 (o projeto foi escrito com Node 22; testes e build passam nos dois).
-- Não há `psql`, Docker, `gh`, CLI da Supabase nem CLI da Vercel instalados. `npm run test:db` não roda aqui sem instalar um Postgres.
+- Não há `psql`, Docker, `gh` nem CLI da Supabase instalados. A CLI da Vercel roda por `npx vercel`. `npm run test:db` não roda aqui sem instalar um Postgres.
 
 ## Teste de ponta a ponta
 
