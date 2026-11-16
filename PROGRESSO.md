@@ -174,6 +174,7 @@ DATABASE_URL=postgres://postgres@localhost:5432/postgres npm run test:db   # pre
 - [ ] **Lembretes por notificação** (o briefing deixou para depois). Exige push no PWA: iOS 16.4+, app instalado, permissão do usuário e um envio pelo servidor (Edge Function do Supabase + Web Push). Ideias: lembrete no fim do dia se ainda não treinou; aviso quando a semana fecha e há punição.
 - [ ] **Aviso de fechamento**: hoje o resultado aparece como cartão na tela Início quando a pessoa abre o app. Sem push, ninguém é avisado sozinho.
 - [ ] Decidir e implementar as pendências do briefing (seção 6).
+- [ ] Melhorias planejadas (checagem de check-in repetido, GPS só com a regra ligada, pedido de revisão, mapa, etc.): ver [MELHORIAS.md](./MELHORIAS.md), com contexto e ordem sugerida.
 
 ### Prioridade 3: qualidade e manutenção
 
@@ -240,6 +241,7 @@ O banco já guarda regras por grupo, então a base existe. Falta:
 ```
 PROGRESSO.md              este arquivo
 README.md                 guia de instalação e decisões provisórias
+MELHORIAS.md              melhorias planejadas, com contexto e ordem sugerida
 src/domain/               regras puras e testes (datas, meta, exceções, sequência)
 src/data/                 consultas ao Supabase (React Query) e tipos
 src/app/                  login e grupo atual (contextos)
