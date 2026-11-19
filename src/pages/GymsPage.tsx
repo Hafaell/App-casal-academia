@@ -87,8 +87,12 @@ export function GymsPage() {
     e.preventDefault()
     const p = await locate()
     if (!p) return
-    if (p.accuracy > 100) {
-      toast(`GPS impreciso agora (±${Math.round(p.accuracy)} m). Espere alguns segundos e tente de novo.`, 'error')
+    // Com raio de 100 m, uma academia salva com erro grande recusaria check-ins feitos dentro dela.
+    if (p.accuracy > 50) {
+      toast(
+        `GPS impreciso agora (±${Math.round(p.accuracy)} m). Fique perto de uma porta ou janela, espere alguns segundos e tente de novo.`,
+        'error',
+      )
       return
     }
     add.mutate(
