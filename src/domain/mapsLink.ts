@@ -128,15 +128,49 @@ export function parseSharedText(text: string): { name?: string; address?: string
   return { name: lines[0], address: lines[1] }
 }
 
+/** Posição achada pelo servidor quando o link não traz o pino (ver api/_embed.ts). */
+export interface ResolvedPlace {
+  lat: number
+  lng: number
+  address?: string
+}
+
+/**
+ * O `q=` do app do Google Maps é "Nome - Endereço". Com o endereço em mãos, o nome é o que sobra
+ * antes dele; sem o endereço, não dá para separar com segurança.
+ */
+export function nameFromQuery(q: string, address?: string): string {
+  const text = decode(q)
+  if (address && text.toLowerCase().endsWith(address.toLowerCase())) {
+    const name = text.slice(0, text.length - address.length).replace(/[\s,-]+$/, '').trim()
+    if (name) return name
+  }
+  return text.split(',')[0].trim()
+}
+
 /** Junta tudo; devolve null se o link não trouxer uma posição confiável. */
-export function placeFromShare(text: string, resolvedUrl: string): SharedPlace | null {
+export function placeFromShare(text: string, resolvedUrl: string, resolved?: ResolvedPlace | null): SharedPlace | null {
   const fromUrl = parseMapsUrl(resolvedUrl)
-  if (fromUrl.lat === undefined || fromUrl.lng === undefined) return null
   const fromText = parseSharedText(text)
+  if (fromUrl.lat !== undefined && fromUrl.lng !== undefined) {
+    return {
+      name: (fromText.name || fromUrl.name || '').slice(0, 80),
+      address: (fromText.address || fromUrl.address || '').slice(0, 200),
+      lat: fromUrl.lat,
+      lng: fromUrl.lng,
+    }
+  }
+  if (!resolved || !valid(resolved.lat, resolved.lng)) return null
+  let q = ''
+  try {
+    q = new URL(resolvedUrl).searchParams.get('q') ?? ''
+  } catch {
+    // sem q: o nome fica por conta de quem colou
+  }
   return {
-    name: (fromText.name || fromUrl.name || '').slice(0, 80),
-    address: (fromText.address || fromUrl.address || '').slice(0, 200),
-    lat: fromUrl.lat,
-    lng: fromUrl.lng,
+    name: (fromText.name || (q && nameFromQuery(q, resolved.address)) || fromUrl.name || '').slice(0, 80),
+    address: (fromText.address || resolved.address || '').slice(0, 200),
+    lat: resolved.lat,
+    lng: resolved.lng,
   }
 }

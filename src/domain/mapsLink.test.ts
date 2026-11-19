@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { extractUrl, isMapsUrl, isShortMapsUrl, mapsSearchUrl, parseMapsUrl, parseSharedText, placeFromShare } from './mapsLink'
+import { extractUrl, isMapsUrl, isShortMapsUrl, mapsSearchUrl, nameFromQuery, parseMapsUrl, parseSharedText, placeFromShare } from './mapsLink'
 
 // Endereço real para onde https://maps.app.goo.gl/MvcjDftMr7a7Pi9W6 redireciona (19/11/2026).
 const PLACE_URL =
@@ -64,5 +64,28 @@ describe('links do Google Maps', () => {
   it('monta a busca pelo nome', () => {
     expect(mapsSearchUrl('Smart Fit Paulista')).toBe('https://www.google.com/maps/search/?api=1&query=Smart%20Fit%20Paulista')
     expect(mapsSearchUrl('  ')).toBe('https://www.google.com/maps/search/?api=1&query=academia')
+  })
+})
+
+// Link real copiado do app do Google Maps no iPhone (19/11/2026): o redirecionamento vem sem pino.
+const APP_URL =
+  'https://www.google.com/maps?q=Academia+Smart+Fit+-+Guarapari+-+R.+Bariloche,+1+-+Praia+do+Morro,+Guarapari+-+ES,+29216-660&ftid=0xb8570507c38497:0x2b2174fde1082533&entry=gps&g_st=ic'
+
+describe('link do app do Google Maps (sem pino)', () => {
+  it('não acha posição só pelo link', () => {
+    expect(placeFromShare('https://maps.app.goo.gl/Z9c4UbzEbioYJhQd7?g_st=ic', APP_URL)).toBeNull()
+  })
+
+  it('usa a posição achada pelo servidor e separa nome e endereço', () => {
+    const address = 'R. Bariloche, 1 - Praia do Morro, Guarapari - ES, 29216-660'
+    expect(nameFromQuery('Academia Smart Fit - Guarapari - ' + address, address)).toBe('Academia Smart Fit - Guarapari')
+    expect(
+      placeFromShare('https://maps.app.goo.gl/Z9c4UbzEbioYJhQd7?g_st=ic', APP_URL, { lat: -20.6499555, lng: -40.4888632, address }),
+    ).toEqual({ name: 'Academia Smart Fit - Guarapari', address, lat: -20.6499555, lng: -40.4888632 })
+  })
+
+  it('recusa posição inválida do servidor', () => {
+    expect(placeFromShare('x', APP_URL, { lat: 0, lng: 0 })).toBeNull()
+    expect(placeFromShare('x', APP_URL, { lat: 99, lng: 10 })).toBeNull()
   })
 })

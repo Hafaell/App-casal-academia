@@ -5,6 +5,8 @@
  * Não baixa a página: só lê o cabeçalho Location de cada salto.
  */
 
+import { embedUrl, parseEmbed, type EmbedPlace } from './_embed.js'
+
 const ALLOWED_HOSTS = new Set([
   'maps.app.goo.gl',
   'goo.gl',
@@ -64,5 +66,22 @@ export async function GET(request: Request): Promise<Response> {
   } catch {
     return json({ error: 'Não consegui abrir o link agora. Tente de novo.' }, 502)
   }
-  return json({ url: current.toString() })
+  const finalUrl = current.toString()
+
+  // Link sem pino (?q=nome&ftid=id): pega a posição exata do lugar no endereço "embed".
+  let place: EmbedPlace | null = null
+  const ftid = current.searchParams.get('ftid')
+  const q = current.searchParams.get('q')
+  if (ftid && q && !/!3d-?\d/.test(finalUrl)) {
+    try {
+      const res = await fetch(embedUrl(q, ftid), {
+        signal: AbortSignal.timeout(TIMEOUT_MS),
+        headers: { 'user-agent': UA, 'accept-language': 'pt-BR,pt;q=0.9' },
+      })
+      if (res.ok) place = parseEmbed((await res.text()).slice(0, 400_000), ftid)
+    } catch {
+      // sem a posição, o app explica o que fazer
+    }
+  }
+  return json({ url: finalUrl, ...(place ? { place } : {}) })
 }
