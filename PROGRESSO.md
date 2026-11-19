@@ -65,6 +65,8 @@ App para o casal (Rafael e a namorada) não desanimar da academia.
 
 ## 3. O que você precisa fazer para colocar no ar
 
+> Roteiro completo e atualizado, na ordem certa, com conferências e solução de problemas: [DEPLOY.md](./DEPLOY.md). A lista abaixo é o resumo original.
+
 Estes passos dependem de contas e acessos seus. Na ordem:
 
 ### A. Supabase (banco, login, fotos)
@@ -241,6 +243,7 @@ O banco já guarda regras por grupo, então a base existe. Falta:
 ```
 PROGRESSO.md              este arquivo
 README.md                 guia de instalação e decisões provisórias
+DEPLOY.md                 passo a passo para colocar em produção
 MELHORIAS.md              melhorias planejadas, com contexto e ordem sugerida
 src/domain/               regras puras e testes (datas, meta, exceções, sequência)
 src/data/                 consultas ao Supabase (React Query) e tipos
