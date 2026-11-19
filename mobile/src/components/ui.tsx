@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useState, type ReactNode } from 'react'
+import { Children, cloneElement, createContext, isValidElement, useCallback, useContext, useState, type ReactNode } from 'react'
 import {
   ActivityIndicator,
   Alert,
@@ -241,6 +241,8 @@ export function Screen({ header, children, refreshControl }: { header?: ReactNod
       <ScrollView
         contentContainerStyle={{ padding: 16, gap: 16, paddingBottom: 40 }}
         keyboardShouldPersistTaps="handled"
+        // iPhone: rola para o campo não ficar escondido atrás do teclado.
+        automaticallyAdjustKeyboardInsets
         refreshControl={refreshControl}
       >
         {children}
@@ -255,7 +257,12 @@ export function Field({ label, children, hint }: { label: string; children: Reac
       <Txt size={14} weight="500" muted style={{ marginBottom: 6 }}>
         {label}
       </Txt>
-      {children}
+      {/* Como o <label> do site: o campo recebe o nome do rótulo (leitor de tela e testes). */}
+      {Children.map(children, (child) =>
+        isValidElement<{ accessibilityLabel?: string }>(child) && child.type === Input && !child.props.accessibilityLabel
+          ? cloneElement(child, { accessibilityLabel: label })
+          : child,
+      )}
       {hint ? (
         <Txt size={12} muted style={{ marginTop: 4 }}>
           {hint}

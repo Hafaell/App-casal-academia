@@ -2,7 +2,7 @@
 
 Este arquivo é o ponto de partida de toda nova sessão. Ele diz onde o projeto está, o que falta e para onde queremos ir.
 
-Última atualização: 19/11/2026 · Branch de trabalho: `develop` · Versão do app: 0.1.0
+Última atualização: 19/11/2026 · Branch de trabalho: `develop` (app nativo: `react-native`) · Versão do app: 0.1.0
 
 Instruções para sessões do Claude Code ficam no [CLAUDE.md](./CLAUDE.md).
 
@@ -49,6 +49,7 @@ App para o casal (Rafael e a namorada) não desanimar da academia.
 | PWA: manifesto, ícones, service worker | Gerado no build, **não testado num iPhone real** |
 | Projeto Supabase de produção (`treino-a-dois`, São Paulo) com as 3 migrações | Feito em 15/11/2026 |
 | Publicação na Vercel (projeto `treino-a-dois`, time `hafael1`, plano Hobby) | Feito em 15/11/2026, pela CLI |
+| **App nativo em React Native (Expo SDK 58)**, na branch `react-native`, pasta `mobile/`: as 13 telas, câmera, GPS, mapa, carimbo na foto, cartão da semana e todas as funções do site, sobre o mesmo Supabase e as mesmas regras de `src/domain/` | Feito em 19/11/2026, **não testado num aparelho**. Passo a passo para abrir no iPhone pelo Expo Go em [mobile/README.md](./mobile/README.md). Sem nenhuma melhoria do `app-comerciavel.md` além da troca de plataforma |
 
 ### Como foi verificado
 
@@ -60,12 +61,21 @@ App para o casal (Rafael e a namorada) não desanimar da academia.
 - Consulta no banco confirmou: 9 tabelas com RLS ligado em todas, bucket `checkins` privado com 3 policies, 20 policies nas tabelas, job `fechar-semanas` ativo (`59 * * * *`).
 - Telas: build de produção servido em `localhost` contra o Supabase real. Cadastro, criação de grupo, Início, Feed, Histórico, Caixinha, Roleta, Grupo e regras, Exceções e Sequência abriram sem erro no console. Os dados de teste foram apagados.
 
+### Como foi verificado o app nativo (19/11/2026)
+
+- `npx tsc --noEmit` sem erros e `expo-doctor` com 20 de 20 verificações.
+- `expo export` para iOS e Android: o código compila para o motor do celular (Hermes).
+- 13 testes de tela com o roteador real e um Supabase simulado em memória: login (senha errada e certa), criação de conta, criar e entrar em grupo, placar do Início, check-in com foto perto e longe da academia, feed com reação e report, caixinha (marcar pago), histórico, roleta, exceção e coringa, regras do grupo (inclusive a recusa de multa máxima menor que a mínima), academias e sair da conta.
+- O carimbo da foto e o cartão da semana foram desenhados de verdade com o Skia de computador (CanvasKit) e conferidos olhando a imagem.
+- `npm test` (57 testes), `npm run typecheck` e `npm run build` do site continuam passando depois do ajuste em `src/domain/dates.ts`.
+
 ### Não verificado ainda
 
 - Câmera ao vivo no iPhone dentro do app instalado. **[Provável]** que funcione no iOS 16.4 ou mais novo; só dá para confirmar num aparelho real. A tela de check-in não foi exercitada no computador (o teste enviou a foto direto pela API).
 - O primeiro fechamento real pelo `pg_cron` (domingo às 23h59). O job existe e está ativo, mas ainda não fechou nenhuma semana de verdade.
 - GPS dentro da academia no iPhone (precisão em ambiente fechado) e a busca no Google Maps com chave real.
 - O app instalado no iPhone. O endereço publicado foi conferido só pelo computador: páginas, manifesto, service worker e ícones respondem, e a tela de login abre sem erro no console.
+- **App nativo num aparelho real** (Expo Go no iPhone): câmera, GPS, mapa nativo, carimbo com as fontes do iPhone e as datas no motor Hermes. Tudo **[Provável]**, nada conferido num celular.
 
 ---
 
@@ -219,6 +229,8 @@ O banco já guarda regras por grupo, então a base existe. Falta:
 - [ ] Telas de grupo com mais de 2 pessoas revisadas (placar, caixinha e feed foram pensados para 2).
 - [ ] Decidir: uma multa sorteada por semana para todos que falharam (como hoje) ou por pessoa, quando o grupo for grande.
 - [ ] Lojas (App Store e Google Play): plano completo, custos e a ordem econômica de gastos em [app-comerciavel.md](./app-comerciavel.md). Decisão de 19/11/2026: app nativo em React Native com Expo.
+- [x] App nativo com as mesmas funções do site (branch `react-native`, pasta `mobile/`), feito em 19/11/2026.
+- [ ] Testar o app nativo no iPhone pelo Expo Go ([mobile/README.md](./mobile/README.md)) e depois levar a branch `react-native` para a `develop`.
 - [ ] Funções para o casal (treino juntos, caixinha com objetivo, roleta de prêmios, relatório mensal e outras), com decisão de o que entra agora ou depois, em [melhorias-casal.md](./melhorias-casal.md).
 
 ---
@@ -271,6 +283,7 @@ README.md                 guia de instalação e decisões provisórias
 scripts/e2e-supabase.mjs  teste de ponta a ponta contra o Supabase real
 DEPLOY.md                 passo a passo para colocar em produção
 MELHORIAS.md              melhorias planejadas, com contexto e ordem sugerida
+mobile/                   app nativo (Expo); usa as regras de src/domain (branch react-native)
 src/domain/               regras puras e testes (datas, meta, exceções, sequência)
 src/data/                 consultas ao Supabase (React Query) e tipos
 src/app/                  login e grupo atual (contextos)

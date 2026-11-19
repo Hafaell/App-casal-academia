@@ -4,7 +4,7 @@
  * Mesmo desenho do site (src/lib/image.ts), feito com o Skia no lugar do canvas.
  */
 import { File, Paths } from 'expo-file-system'
-import { FontWeight, ImageFormat, Skia, type SkCanvas } from '@shopify/react-native-skia'
+import { FontWeight, ImageFormat, Skia, type SkCanvas, type SkImage, type SkSurface } from '@shopify/react-native-skia'
 
 export interface PreparedPhoto {
   /** JPEG pronto para enviar. */
@@ -32,6 +32,15 @@ export function textBlock(
     height: paragraph.getHeight(),
     paint: (canvas, x, y) => paragraph.paint(canvas, x, y),
   }
+}
+
+/**
+ * Imagem final do desenho. A cópia para fora da GPU (makeNonTextureImage) é o mesmo passo
+ * que o próprio Skia usa antes de entregar uma imagem desenhada fora da tela.
+ */
+export function snapshot(surface: SkSurface): SkImage {
+  const image = surface.makeImageSnapshot()
+  return image.makeNonTextureImage() ?? image
 }
 
 /** Grava os bytes num arquivo temporário e devolve o endereço dele. */
@@ -69,7 +78,7 @@ export function prepareCheckinPhoto(base64Jpeg: string, stamp: string): Prepared
   text.paint(canvas, pad * 2, h - pad * 2 - fontSize / 2 - text.height / 2)
 
   surface.flush()
-  const bytes = surface.makeImageSnapshot().encodeToBytes(ImageFormat.JPEG, 82)
+  const bytes = snapshot(surface).encodeToBytes(ImageFormat.JPEG, 82)
   if (!bytes || bytes.length === 0) throw new Error('Falha ao gerar a foto')
   const uri = writeTempFile(bytes, `checkin-${Date.now()}.jpg`)
   return { bytes, uri }

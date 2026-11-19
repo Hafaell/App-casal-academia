@@ -6,6 +6,9 @@ import { useAuth } from '@/providers/AuthProvider'
 import { GroupProvider, readSelectedGroup } from '@/providers/GroupProvider'
 import { colors } from '@/lib/theme'
 
+// Abrir um link direto para o check-in ainda deixa as abas por baixo (o Cancelar volta para elas).
+export const unstable_settings = { anchor: '(tabs)' }
+
 /** Portão: sem login vai para Entrar; sem grupo, para Boas-vindas; senão abre o app do grupo. */
 export default function AppLayout() {
   const { session, loading } = useAuth()

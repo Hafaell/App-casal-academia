@@ -5,7 +5,7 @@
  */
 import * as Sharing from 'expo-sharing'
 import { ClipOp, FontWeight, ImageFormat, Skia, type SkCanvas, type SkImage } from '@shopify/react-native-skia'
-import { textBlock, writeTempFile } from './image'
+import { snapshot, textBlock, writeTempFile } from './image'
 
 export interface SummaryLine {
   name: string
@@ -96,7 +96,7 @@ export async function buildSummaryCard(d: SummaryCardData): Promise<SummaryCard>
   textBlock(d.footer, { fontSize: 34, color: '#8b97a8' }).paint(canvas, 64, H - 64 - 34)
 
   surface.flush()
-  const bytes = surface.makeImageSnapshot().encodeToBytes(ImageFormat.JPEG, 90)
+  const bytes = snapshot(surface).encodeToBytes(ImageFormat.JPEG, 90)
   if (!bytes || bytes.length === 0) throw new Error('Não consegui gerar a imagem.')
   return { uri: writeTempFile(bytes, `semana-${Date.now()}.jpg`) }
 }

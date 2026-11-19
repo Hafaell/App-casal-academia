@@ -31,8 +31,9 @@ export default function RootLayout() {
   const [queryClient] = useState(makeQueryClient)
 
   // Link de convite (treinoadois://?convite=ABC123): guarda o código até a pessoa entrar.
+  // Lido já na montagem, antes da tela de boas-vindas preencher o campo do código.
   const url = Linking.useLinkingURL()
-  useEffect(() => capturePendingInvite(url), [url])
+  capturePendingInvite(url)
 
   // Ao sair da conta, esquece os dados da conta anterior.
   useEffect(() => {

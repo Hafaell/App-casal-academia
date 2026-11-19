@@ -28,6 +28,18 @@ npm run test:db      # regras do banco; precisa de psql e de um Postgres VAZIO
 
 Antes de dizer que algo está pronto, rode `npm test`, `npm run typecheck` e `npm run build`.
 
+App nativo (branch `react-native`, pasta `mobile/`), rodando de dentro de `mobile/`:
+
+```bash
+npx expo start       # abre no Expo Go (precisa do mobile/.env.local)
+npm test             # telas com Supabase simulado + desenho da foto com Skia de computador
+npm run typecheck
+npm run doctor       # expo-doctor
+npm run export       # empacota iOS e Android (prova que compila para o celular)
+```
+
+Mexeu no app nativo: rode os quatro últimos. Mexeu em `src/domain/`: rode também `npm test` na raiz.
+
 ## Arquitetura
 
 - React 19, TypeScript estrito, Vite 7, Tailwind 4, vite-plugin-pwa. Alias `@/` aponta para `src/`.
@@ -35,6 +47,7 @@ Antes de dizer que algo está pronto, rode `npm test`, `npm run typecheck` e `np
 - `src/data/queries.ts`: único lugar que fala com o Supabase (hooks do React Query). As telas não chamam o Supabase direto.
 - `src/pages/`: uma tela por arquivo. `src/app/`: contextos de login e grupo.
 - `supabase/migrations/`: esquema, Storage e agendamento. `supabase/tests/`: testes do banco em Postgres puro.
+- `mobile/`: app nativo (Expo SDK 58, React Native, Expo Router). Usa as regras de `src/domain/` direto (alias `@domain/`, via `metro.config.js`), sem copiar. `mobile/src/data/queries.ts` é o único lugar do app que fala com o Supabase. Detalhes e passo a passo em [mobile/README.md](./mobile/README.md).
 
 ## Regras que não podem ser quebradas
 
