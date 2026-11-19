@@ -321,9 +321,12 @@ function WeekCard({
   const { nameOf, members } = useGroup()
   const toast = useToast()
   const [sharing, setSharing] = useState(false)
+  const [card, setCard] = useState<{ blob: Blob; url: string } | null>(null)
+  const [viewingCard, setViewingCard] = useState(false)
   const owing = results.filter((r) => r.owes)
 
-  async function share() {
+  // Toque 1: monta a imagem (demora, por causa das fotos). Toque 2: compartilha na hora.
+  async function prepare() {
     setSharing(true)
     try {
       const end = addDays(week.week_start, 6)
@@ -342,11 +345,20 @@ function WeekCard({
         })),
         footer: owing.length === 0 ? 'Ninguém foi punido 💪' : `Caixinha: ${formatMoney(week.fine_amount ?? 0)}`,
       })
-      await shareImage(blob, `semana-${week.week_start}.jpg`)
+      setCard({ blob, url: URL.createObjectURL(blob) })
     } catch (err) {
       toast(errorMessage(err), 'error')
     } finally {
       setSharing(false)
+    }
+  }
+
+  async function share() {
+    if (!card) return
+    try {
+      if (!(await shareImage(card.blob, `semana-${week.week_start}.jpg`))) setViewingCard(true)
+    } catch (err) {
+      toast(errorMessage(err), 'error')
     }
   }
   return (
@@ -363,9 +375,14 @@ function WeekCard({
       <p className="mt-1 text-xs text-muted">
         {results.map((r) => `${nameOf(r.user_id)} ${r.checkins}/${r.goal}${r.used_joker ? ' 🃏' : ''}`).join(' · ')}
       </p>
-      <Button variant="ghost" className="mt-2 w-full !text-accent" onClick={share} loading={sharing}>
-        📤 Compartilhar cartão da semana
+      <Button variant="ghost" className="mt-2 w-full !text-accent" onClick={card ? share : prepare} loading={sharing}>
+        {sharing ? 'Preparando…' : card ? '📤 Compartilhar' : '🖼️ Montar cartão da semana'}
       </Button>
+      <PhotoViewer
+        url={viewingCard ? (card?.url ?? null) : null}
+        caption="Segure a imagem para salvar ou compartilhar"
+        onClose={() => setViewingCard(false)}
+      />
     </Card>
   )
 }

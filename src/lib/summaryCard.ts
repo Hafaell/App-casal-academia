@@ -22,14 +22,31 @@ export interface SummaryCardData {
 const W = 1080
 const H = 1350 // 4:5, o formato do feed do Instagram; também cabe na memória do iPhone.
 
-function loadPhoto(url: string): Promise<HTMLImageElement | null> {
-  return new Promise((resolve) => {
-    const img = new Image()
-    img.crossOrigin = 'anonymous' // sem isso o canvas fica "contaminado" e não exporta
-    img.onload = () => resolve(img)
-    img.onerror = () => resolve(null)
-    img.src = url
-  })
+/**
+ * Baixa a foto como arquivo (blob) e desenha a partir dele. O endereço do blob é do próprio app,
+ * então o canvas nunca fica "contaminado" e consegue exportar. O Safari às vezes reaproveita a
+ * resposta que o feed já carregou sem CORS; por isso o download é feito de novo, sem cache.
+ */
+async function loadPhoto(url: string): Promise<HTMLImageElement | null> {
+  try {
+    const res = await fetch(url, { mode: 'cors', cache: 'no-store' })
+    if (!res.ok) return null
+    const local = URL.createObjectURL(await res.blob())
+    return await new Promise((resolve) => {
+      const img = new Image()
+      img.onload = () => {
+        URL.revokeObjectURL(local)
+        resolve(img)
+      }
+      img.onerror = () => {
+        URL.revokeObjectURL(local)
+        resolve(null)
+      }
+      img.src = local
+    })
+  } catch {
+    return null
+  }
 }
 
 function cover(ctx: CanvasRenderingContext2D, img: HTMLImageElement, x: number, y: number, w: number, h: number) {
@@ -111,21 +128,22 @@ export async function buildSummaryCard(d: SummaryCardData): Promise<Blob> {
   )
 }
 
-/** Abre o compartilhamento do aparelho; se não existir, baixa o arquivo. */
-export async function shareImage(blob: Blob, filename: string): Promise<void> {
+/**
+ * Abre o compartilhamento do aparelho. Precisa ser chamada direto do toque, sem esperar nada antes:
+ * o iPhone recusa o compartilhamento se passar alguns segundos depois do toque.
+ * Devolve false quando não deu (aparelho sem suporte ou toque recusado): quem chamou mostra a imagem
+ * para a pessoa segurar e salvar.
+ */
+export async function shareImage(blob: Blob, filename: string): Promise<boolean> {
   const file = new File([blob], filename, { type: blob.type })
-  if (navigator.canShare?.({ files: [file] })) {
-    try {
-      await navigator.share({ files: [file] })
-    } catch (err) {
-      if ((err as DOMException)?.name !== 'AbortError') throw err // fechar a janela não é erro
-    }
-    return
+  if (!navigator.canShare?.({ files: [file] })) return false
+  try {
+    await navigator.share({ files: [file] })
+    return true
+  } catch (err) {
+    const name = (err as DOMException)?.name
+    if (name === 'AbortError') return true // a pessoa fechou a janela: não é erro
+    if (name === 'NotAllowedError') return false
+    throw err
   }
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = filename
-  a.click()
-  setTimeout(() => URL.revokeObjectURL(url), 10_000)
 }

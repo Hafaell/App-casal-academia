@@ -23,7 +23,7 @@ Legenda de confiança: **[Certa]**, **[Provável]**, **[Adivinhando]**.
 | 9 | Cor por pessoa | **Feito** no Histórico (barra colorida no dia e borda na foto) e no Feed. Quem saiu do grupo aparece em cinza |
 | 10 | Revisar a tela Início | **Não feito.** Precisa ver a tela num iPhone |
 | 11 | Pedido de revisão | **Trocado pelo pedido do casal:** outro membro pode **reportar** a foto e o treino é cancelado (ver abaixo) |
-| 12 | Cartão do resumo semanal | **Feito.** Botão "Compartilhar cartão da semana" no Feed, em cada semana fechada |
+| 12 | Cartão do resumo semanal | **Feito.** No Feed, em cada semana fechada: toque 1 monta a imagem, toque 2 compartilha (o iPhone recusa compartilhar se demorar depois do toque). Se o aparelho não deixar, mostra a imagem para segurar e salvar |
 | 13 | Reações nas fotos | **Feito** (💪 🔥 👏 😍, uma por pessoa) |
 | 14 | Tipo de treino | **Feito**, opcional, escolhido na prévia da foto |
 | 15 | Lembrete por horário | **Adiado.** Depende de notificações push (chaves, inscrição e Edge Function) |
