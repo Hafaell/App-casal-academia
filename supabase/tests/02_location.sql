@@ -52,20 +52,25 @@ begin
   -- Cerca de 1 km ao norte: recusa e diz a distância.
   perform test.expect_error(
     format('insert into public.checkins (group_id, photo_path, lat, lng, accuracy_m) values (%L, %L, -23.5415, -46.6333, 20)', test.id('g'), path),
-    '%1001 m da academia mais próxima (Smart Fit Centro)%300 m%');
+    '%1001 m da academia mais próxima (Smart Fit Centro)%100 m%');
+
+  -- Cerca de 200 m: fora do raio de 100 m.
+  perform test.expect_error(
+    format('insert into public.checkins (group_id, photo_path, lat, lng, accuracy_m) values (%L, %L, -23.5487, -46.6333, 15)', test.id('g'), path),
+    '%200 m da academia mais próxima%');
 
   -- Perto, mas com GPS impreciso demais.
   perform test.expect_error(
     format('insert into public.checkins (group_id, photo_path, lat, lng, accuracy_m) values (%L, %L, -23.5505, -46.6333, 900)', test.id('g'), path),
     '%GPS fraco%');
 
-  -- Cerca de 200 m: aceita. O app tenta mandar academia e distância falsas, o banco recalcula.
+  -- Cerca de 50 m: aceita. O app tenta mandar academia e distância falsas, o banco recalcula.
   insert into public.checkins (group_id, photo_path, lat, lng, accuracy_m, gym_id, gym_name, distance_m)
-  values (test.id('g'), path, -23.5487, -46.6333, 15, gen_random_uuid(), 'Falsa', 0);
+  values (test.id('g'), path, -23.55005, -46.6333, 15, gen_random_uuid(), 'Falsa', 0);
   select * into c from public.checkins where user_id = test.id('a') and day = public.local_today(test.id('g'));
   assert c.gym_id = test.id('gym'), 'academia decidida pelo banco';
   assert c.gym_name = 'Smart Fit Centro', 'nome da academia guardado';
-  assert c.distance_m between 195 and 205, format('distância calculada pelo banco (%s)', c.distance_m);
+  assert c.distance_m between 45 and 55, format('distância calculada pelo banco (%s)', c.distance_m);
 end $$;
 
 -- ---------------------------------------------------------------------
@@ -76,8 +81,11 @@ do $$
 declare path text := test.id('g') || '/' || test.id('b') || '/loc1.jpg';
 begin
   assert (select count(*) from public.gyms) = 1, 'parceiro vê a academia do grupo';
-  -- Exatamente na borda (~299 m) passa.
-  insert into public.checkins (group_id, photo_path, lat, lng) values (test.id('g'), path, -23.5478, -46.6333);
+  -- Logo depois da borda (~101 m) recusa; na borda (~99 m) passa.
+  perform test.expect_error(
+    format('insert into public.checkins (group_id, photo_path, lat, lng) values (%L, %L, -23.54959, -46.6333)', test.id('g'), path),
+    '%101 m da academia mais próxima%');
+  insert into public.checkins (group_id, photo_path, lat, lng) values (test.id('g'), path, -23.54961, -46.6333);
   perform test.expect_error(format('update public.gyms set lat = 0 where id = %L', test.id('gym')), '%permission denied%');
 end $$;
 

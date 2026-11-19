@@ -133,7 +133,7 @@ export function CheckinPage() {
 
   function send() {
     if (!photo) return
-    // A posição vai junto com a foto; o banco confere de novo os 300 m.
+    // A posição vai junto com a foto; o banco confere de novo o raio (GYM_RADIUS_M).
     const pos = photo.position ?? position
     if (required && !pos) return toast('Ainda sem localização. Espere o GPS e tente de novo.', 'error')
     const sent = pos ? { lat: pos.lat, lng: pos.lng, accuracy: pos.accuracy } : null

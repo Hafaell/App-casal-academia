@@ -1,10 +1,11 @@
 import { Link } from 'react-router'
 import { useGroup } from '@/app/GroupProvider'
 import { PageHeader } from '@/components/ui'
+import { GYM_RADIUS_M } from '@/domain/geo'
 import { supabase } from '@/lib/supabase'
 
 const items = [
-  { to: '/academias', icon: '📍', title: 'Academias', desc: 'Onde o check-in vale (até 300 m pelo GPS)' },
+  { to: '/academias', icon: '📍', title: 'Academias', desc: `Onde o check-in vale (até ${GYM_RADIUS_M} m pelo GPS)` },
   { to: '/excecoes', icon: '🩹', title: 'Exceções e coringa', desc: 'Doença, viagem, lesão, menstruação e o coringa do mês' },
   { to: '/sequencia', icon: '🔥', title: 'Sequência', desc: 'Semanas seguidas batendo a meta' },
   { to: '/roleta', icon: '🎡', title: 'Roleta de punições', desc: 'Adicionar, editar ou remover punições' },

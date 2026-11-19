@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { checkLocation, distanceMeters, formatDistance, nearest } from './geo'
+import { GYM_RADIUS_M, checkLocation, distanceMeters, formatDistance, nearest } from './geo'
 
 const gym = { name: 'Smart Fit Centro', lat: -23.5505, lng: -46.6333 }
 const other = { name: 'Bodytech', lat: -23.5615, lng: -46.6559 }
@@ -18,9 +18,13 @@ describe('localização', () => {
     expect(nearest(gym, [])).toBeNull()
   })
 
-  it('aprova até 300 m e recusa além disso', () => {
-    expect(checkLocation({ lat: -23.5487, lng: -46.6333, accuracy: 20 }, [gym]).status).toBe('ok')
-    expect(checkLocation({ lat: -23.5478, lng: -46.6333 }, [gym]).status).toBe('ok')
+  it('aprova até 100 m e recusa além disso', () => {
+    expect(GYM_RADIUS_M).toBe(100)
+    // Mesmos pontos do teste do banco: ~50 m, ~99 m (borda), ~101 m, ~200 m e ~1 km.
+    expect(checkLocation({ lat: -23.55005, lng: -46.6333, accuracy: 20 }, [gym]).status).toBe('ok')
+    expect(checkLocation({ lat: -23.54961, lng: -46.6333 }, [gym])).toMatchObject({ status: 'ok', distance: 99 })
+    expect(checkLocation({ lat: -23.54959, lng: -46.6333 }, [gym])).toMatchObject({ status: 'far', distance: 101 })
+    expect(checkLocation({ lat: -23.5487, lng: -46.6333 }, [gym]).status).toBe('far')
     const far = checkLocation({ lat: -23.5415, lng: -46.6333, accuracy: 20 }, [gym])
     expect(far).toMatchObject({ status: 'far', distance: 1001 })
   })

@@ -5,7 +5,7 @@
  */
 
 /** Raio permitido em volta da academia. Igual a public.gym_radius_m() no banco. */
-export const GYM_RADIUS_M = 300
+export const GYM_RADIUS_M = 100
 
 /** Acima disso o banco recusa o check-in por GPS impreciso. */
 export const MAX_ACCURACY_M = 500

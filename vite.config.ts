@@ -32,6 +32,7 @@ export default defineConfig({
       },
       workbox: {
         navigateFallback: '/index.html',
+        navigateFallbackDenylist: [/^\/api\//],
         // Dados do Supabase nunca vêm do cache: o placar precisa estar sempre certo.
         runtimeCaching: [],
       },

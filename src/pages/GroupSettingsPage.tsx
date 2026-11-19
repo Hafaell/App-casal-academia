@@ -3,6 +3,7 @@ import { useGroup } from '@/app/GroupProvider'
 import { Avatar, Button, Card, Field, PageHeader, cx, inputClass, memberColor, useToast } from '@/components/ui'
 import { useCreateGroup, useJoinGroup, useLeaveGroup, useUpdateGroupRules, useUpdateMyName } from '@/data/queries'
 import { dayMonth } from '@/domain/dates'
+import { GYM_RADIUS_M } from '@/domain/geo'
 import { inviteLink } from '@/lib/invite'
 import { errorMessage } from '@/lib/supabase'
 
@@ -165,7 +166,7 @@ export function GroupSettingsPage() {
             <label className="flex items-center justify-between gap-3 text-sm">
               <span>
                 Exigir estar na academia
-                <span className="block text-xs text-muted">Ligado: o GPS precisa estar a até 300 m de uma academia cadastrada.</span>
+                <span className="block text-xs text-muted">Ligado: o GPS precisa estar a até {GYM_RADIUS_M} m de uma academia cadastrada.</span>
               </span>
               <input
                 type="checkbox"

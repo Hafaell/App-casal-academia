@@ -195,7 +195,7 @@ function useInvalidate() {
 
 export interface CheckinInput {
   photo: Blob
-  /** Posição no momento da foto. O banco escolhe a academia e confere os 300 m. */
+  /** Posição no momento da foto. O banco escolhe a academia e confere o raio (gym_radius_m). */
   position: { lat: number; lng: number; accuracy: number } | null
 }
 
