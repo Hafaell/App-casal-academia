@@ -44,6 +44,7 @@ App para o casal (Rafael e a namorada) não desanimar da academia.
 | Verificação de localização: academias do grupo (link colado do Google Maps, posição atual ou busca com chave do Google), check-in só a até 100 m, conferido no banco; botão Excluir | Feito, **não testado no iPhone**. A busca com chave do Google não foi ativada (sem chave) |
 | Grupo e regras: meta, faixa de multa, domingo, coringas por mês, convite, nome | Feito |
 | Banco com regras e segurança (RLS) em todas as tabelas e nas fotos | Feito |
+| Reações nas fotos, tipo de treino opcional, cartão da semana para compartilhar, mapa das academias, reportar treino de outro membro (cancela) | Feito em 19/11/2026, **não testado no iPhone**. Detalhes e decisões em [MELHORIAS.md](./MELHORIAS.md) |
 | Fechamento automático da semana (função no banco + agendamento + rede de segurança no app) | Job agendado e ativo no Supabase real; **o primeiro fechamento real ainda não aconteceu** |
 | PWA: manifesto, ícones, service worker | Gerado no build, **não testado num iPhone real** |
 | Projeto Supabase de produção (`treino-a-dois`, São Paulo) com as 3 migrações | Feito em 15/11/2026 |
@@ -98,6 +99,7 @@ Feito em 15/11/2026. Endereço de produção: **https://treino-a-dois-theta.verc
 - [x] **GitHub ligado ao projeto** em 19/11/2026: push na `main` publica em produção; push em outras branches gera Preview.
 - [ ] Opcional: variável `VITE_GOOGLE_MAPS_API_KEY` (busca de academias pelo nome no Google Maps).
 - [x] Branch de produção: `main`. Fluxo: trabalhar na `develop` e levar para a `main` para publicar.
+- [x] **Migrações 6 e 7** (`20261119000002_reactions_and_kind.sql` e `20261119000003_report_checkin.sql`) aplicadas pelo SQL Editor em 19/11/2026 e conferidas por consulta (RLS, permissões e emojis).
 - [x] **Migração 5 (raio 100 m):** `20261119000001_gym_radius_100.sql` aplicada pelo SQL Editor em 19/11/2026 e conferida (`gym_radius_m()` = 100).
 
 ### C. iPhone (instalar como app)
@@ -195,7 +197,7 @@ DATABASE_URL=postgres://postgres@localhost:5432/postgres npm run test:db   # pre
 - [ ] **Lembretes por notificação** (o briefing deixou para depois). Exige push no PWA: iOS 16.4+, app instalado, permissão do usuário e um envio pelo servidor (Edge Function do Supabase + Web Push). Ideias: lembrete no fim do dia se ainda não treinou; aviso quando a semana fecha e há punição.
 - [ ] **Aviso de fechamento**: hoje o resultado aparece como cartão na tela Início quando a pessoa abre o app. Sem push, ninguém é avisado sozinho.
 - [ ] Decidir e implementar as pendências do briefing (seção 6).
-- [ ] Melhorias planejadas (checagem de check-in repetido, GPS só com a regra ligada, pedido de revisão, mapa, etc.): ver [MELHORIAS.md](./MELHORIAS.md), com contexto e ordem sugerida.
+- [x] Melhorias planejadas: quase todas feitas em 19/11/2026; o que ficou de fora (notificações, fila offline, Playwright, revisão da tela Início) está explicado em [MELHORIAS.md](./MELHORIAS.md).
 
 ### Prioridade 3: qualidade e manutenção
 
