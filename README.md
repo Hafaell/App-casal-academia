@@ -33,6 +33,7 @@ As regras que valem dinheiro ficam **no banco**, não no aparelho:
 - A semana é fechada pela função `close_week`, que calcula a meta com exceções e coringa, sorteia a multa e a punição e registra a dívida. O sorteio é um só por semana, então se os dois falharem pagam a mesma coisa.
 - Semana fechada não pode ser alterada (apagar check-in, exceção ou coringa).
 - Cada pessoa só envia fotos para a própria pasta, e só membros do grupo veem as fotos.
+- **Localização:** o app manda a posição do GPS junto com a foto e o banco confere se ela está a até **300 m** de uma academia cadastrada pelo grupo. O próprio banco escolhe a academia e calcula a distância. A regra pode ser desligada em Grupo e regras.
 
 O app repete o cálculo da meta em `src/domain/rules.ts` só para mostrar o placar ao vivo.
 
@@ -61,15 +62,29 @@ npm run dev
 2. Em **Environment Variables**, cadastre `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY`.
 3. Faça o deploy. O `vercel.json` já redireciona as rotas para o app.
 
-### 4. Instalar no iPhone
+### 4. Google Maps (opcional, para buscar a academia pelo nome)
 
-Abra o endereço da Vercel no **Safari** > botão Compartilhar > **Adicionar à Tela de Início**. Na primeira foto, permita o acesso à câmera.
+Sem esta chave o app funciona: a academia é cadastrada pela posição atual, com a pessoa dentro dela.
 
-### 5. Começar
+1. Em [console.cloud.google.com](https://console.cloud.google.com), crie um projeto e ative o faturamento (o Google exige cartão, mas o uso de um casal fica dentro da cota gratuita mensal).
+2. Em **APIs e serviços > Biblioteca**, ative **Maps JavaScript API** e **Places API (New)**.
+3. Em **Credenciais**, crie uma **chave de API** e restrinja:
+   - **Restrições de aplicativo:** Sites (referenciadores HTTP), com o endereço da Vercel (`https://seu-app.vercel.app/*`) e `http://localhost:5173/*` para testes.
+   - **Restrições de API:** só as duas APIs acima.
+4. Cadastre a chave como `VITE_GOOGLE_MAPS_API_KEY` na Vercel e no `.env.local`.
+
+A chave vai para o navegador (é assim que o Google Maps funciona na web), por isso a restrição por site é obrigatória.
+
+### 5. Instalar no iPhone
+
+Abra o endereço da Vercel no **Safari** > botão Compartilhar > **Adicionar à Tela de Início**. Na primeira foto, permita o acesso à câmera e à localização.
+
+### 6. Começar
 
 1. Uma pessoa cria a conta e o grupo.
 2. Em **Mais > Grupo e regras**, toque em **Compartilhar** e mande o convite.
 3. A outra pessoa cria a conta e entra com o código (ou abre o link do convite).
+4. Em **Mais > Academias**, cadastrem a academia (busca no Google Maps ou "Estou na academia agora").
 
 A meta começa a valer na segunda-feira seguinte à criação do grupo (ou no mesmo dia, se for criado numa segunda). Antes disso os check-ins já aparecem no feed, sem punição.
 
@@ -95,7 +110,7 @@ O briefing deixou alguns pontos em aberto. Para não travar a primeira versão, 
 | Multa por semana ou por treino faltante? | Um valor sorteado **por semana** | `close_week` no banco |
 | Exceção reduz a meta em 1? Tem limite? | Reduz 1 por dia útil (seg a sex) justificado, **sem limite mensal**. Exceção em dia que a pessoa treinou não reduz | `close_week` e `rules.ts` |
 | Treino no domingo conta? | **Não** por padrão, e o check-in fica bloqueado | Configurável em Grupo e regras |
-| Registrar localização? | Não. A foto ganha um carimbo com dia, hora e nome do grupo | |
+| Registrar localização? | **Sim.** Check-in só vale a até 300 m de uma academia do grupo (regra ligada por padrão). A foto ganha carimbo com dia, hora e nome da academia | `20261116000001_gym_location.sql` e `src/domain/geo.ts` |
 | Recompensa por sequência? | Não. A tela de Sequência mostra semanas seguidas de cada um e do casal | |
 | Para que serve a caixinha? | Só controle: quanto entrou e quanto cada um deve | |
 | Nome do app | "Treino a Dois" (provisório) | `vite.config.ts` e `index.html` |

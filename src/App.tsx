@@ -17,6 +17,7 @@ import { StreakPage } from './pages/StreakPage'
 import { RoulettePage } from './pages/RoulettePage'
 import { ExceptionsPage } from './pages/ExceptionsPage'
 import { GroupSettingsPage } from './pages/GroupSettingsPage'
+import { GymsPage } from './pages/GymsPage'
 
 export function App() {
   if (!isConfigured) {
@@ -61,6 +62,7 @@ function Gate() {
           <Route path="roleta" element={<RoulettePage />} />
           <Route path="excecoes" element={<ExceptionsPage />} />
           <Route path="grupo" element={<GroupSettingsPage />} />
+          <Route path="academias" element={<GymsPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>

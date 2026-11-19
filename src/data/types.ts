@@ -16,11 +16,12 @@ export interface Group {
   jokers_per_month: number
   timezone: string
   starts_on: string
+  require_location: boolean
 }
 
 export type GroupRulesUpdate = Pick<
   Group,
-  'name' | 'weekly_goal' | 'fine_min' | 'fine_max' | 'sunday_counts' | 'jokers_per_month'
+  'name' | 'weekly_goal' | 'fine_min' | 'fine_max' | 'sunday_counts' | 'jokers_per_month' | 'require_location'
 >
 
 export interface Member {
@@ -38,6 +39,24 @@ export interface Checkin {
   user_id: string
   day: string
   photo_path: string
+  created_at: string
+  lat: number | null
+  lng: number | null
+  accuracy_m: number | null
+  gym_id: string | null
+  gym_name: string | null
+  distance_m: number | null
+}
+
+export interface Gym {
+  id: string
+  group_id: string
+  name: string
+  address: string | null
+  place_id: string | null
+  lat: number
+  lng: number
+  created_by: string | null
   created_at: string
 }
 

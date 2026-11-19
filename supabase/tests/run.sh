@@ -21,5 +21,6 @@ for f in supabase/migrations/*.sql; do
   [[ "$f" == *schedule* ]] && continue
   run "$f"
 done
-run supabase/tests/01_rules.sql
+# Os dois arquivos rodam na mesma sessão: o 02 usa as pessoas e atalhos criados no 01.
+psql "$URL" -qX -v ON_ERROR_STOP=1 -f supabase/tests/01_rules.sql -f supabase/tests/02_location.sql
 echo "Testes do banco: OK"

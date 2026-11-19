@@ -22,6 +22,7 @@ export function GroupSettingsPage() {
     fine_max: group.fine_max,
     sunday_counts: group.sunday_counts,
     jokers_per_month: group.jokers_per_month,
+    require_location: group.require_location,
   })
   const [myName, setMyName] = useState(me?.display_name ?? '')
   const [code, setCode] = useState('')
@@ -159,6 +160,18 @@ export function GroupSettingsPage() {
                 className="h-6 w-6 accent-[#c6f432]"
                 checked={form.sunday_counts}
                 onChange={(e) => setForm({ ...form, sunday_counts: e.target.checked })}
+              />
+            </label>
+            <label className="flex items-center justify-between gap-3 text-sm">
+              <span>
+                Exigir estar na academia
+                <span className="block text-xs text-muted">Ligado: o GPS precisa estar a até 300 m de uma academia cadastrada.</span>
+              </span>
+              <input
+                type="checkbox"
+                className="h-6 w-6 accent-[#c6f432]"
+                checked={form.require_location}
+                onChange={(e) => setForm({ ...form, require_location: e.target.checked })}
               />
             </label>
             <Button type="submit" className="w-full" loading={update.isPending}>

@@ -2,7 +2,7 @@
 
 Este arquivo é o ponto de partida de toda nova sessão. Ele diz onde o projeto está, o que falta e para onde queremos ir.
 
-Última atualização: 15/11/2026 · Branch de trabalho: `develop` · Versão do app: 0.1.0
+Última atualização: 16/11/2026 · Branch de trabalho: `develop` · Versão do app: 0.1.0
 
 Instruções para sessões do Claude Code ficam no [CLAUDE.md](./CLAUDE.md).
 
@@ -41,6 +41,7 @@ App para o casal (Rafael e a namorada) não desanimar da academia.
 | Caixinha: saldo, dívidas, marcar multa paga e punição cumprida | Feito |
 | Roleta: adicionar, editar, pausar e remover punições | Feito |
 | Exceções e coringa do mês | Feito |
+| Verificação de localização: academias do grupo (busca no Google Maps ou posição atual), check-in só a até 300 m, conferido no banco | Feito, **não testado no iPhone nem com chave real do Google** |
 | Grupo e regras: meta, faixa de multa, domingo, coringas por mês, convite, nome | Feito |
 | Banco com regras e segurança (RLS) em todas as tabelas e nas fotos | Feito |
 | Fechamento automático da semana (função no banco + agendamento + rede de segurança no app) | Job agendado e ativo no Supabase real; **o primeiro fechamento real ainda não aconteceu** |
@@ -50,8 +51,9 @@ App para o casal (Rafael e a namorada) não desanimar da academia.
 
 ### Como foi verificado
 
+- Localização: testes do banco em `supabase/tests/02_location.sql` e telas abertas no Chromium com GPS simulado.
 - Regras do banco: testes em Postgres local imitando o Supabase (`npm run test:db`). Passaram em 13/11. Não foram repetidos em 15/11 porque a máquina atual não tem `psql`.
-- Regras do app: 23 testes (`npm test`). Passaram.
+- Regras do app: 28 testes (`npm test`). Passaram.
 - `npm run typecheck` e `npm run build` passam (Node 26, npm 11).
 - **Supabase real (15/11/2026):** `npm run test:e2e` passou nos 53 passos: cadastro e login, perfil criado pelo gatilho, grupo e convite, envio e leitura de foto pelo Storage, check-in com dia e usuário definidos pelo servidor, bloqueio de domingo, um check-in por dia, exceção, coringa, edição de regras e roleta, `catch_up_weeks`, e o isolamento (quem não é do grupo não vê dados nem fotos; `close_week` não é exposta).
 - Consulta no banco confirmou: 9 tabelas com RLS ligado em todas, bucket `checkins` privado com 3 policies, 20 policies nas tabelas, job `fechar-semanas` ativo (`59 * * * *`).
@@ -61,11 +63,14 @@ App para o casal (Rafael e a namorada) não desanimar da academia.
 
 - Câmera ao vivo no iPhone dentro do app instalado. **[Provável]** que funcione no iOS 16.4 ou mais novo; só dá para confirmar num aparelho real. A tela de check-in não foi exercitada no computador (o teste enviou a foto direto pela API).
 - O primeiro fechamento real pelo `pg_cron` (domingo às 23h59). O job existe e está ativo, mas ainda não fechou nenhuma semana de verdade.
+- GPS dentro da academia no iPhone (precisão em ambiente fechado) e a busca no Google Maps com chave real.
 - O app instalado no iPhone. O endereço publicado foi conferido só pelo computador: páginas, manifesto, service worker e ícones respondem, e a tela de login abre sem erro no console.
 
 ---
 
 ## 3. O que você precisa fazer para colocar no ar
+
+> Roteiro completo e atualizado, na ordem certa, com conferências e solução de problemas: [DEPLOY.md](./DEPLOY.md). A lista abaixo é o resumo original.
 
 Estes passos dependem de contas e acessos seus. Na ordem:
 
@@ -79,6 +84,7 @@ Feito em 15/11/2026. Projeto `treino-a-dois` (ref `hyxvesqvvhueaigclpbl`, São P
 - [x] **Confirm email desligado.** O cadastro já entra direto. Para religar: Authentication > Sign In / Providers.
 - [x] *Site URL* em **Authentication > URL Configuration** aponta para `https://treino-a-dois-theta.vercel.app`.
 - [x] Job `fechar-semanas` conferido: existe e está ativo.
+- [ ] **Migração 4 (GPS):** `20261116000001_gym_location.sql` ainda precisa ser aplicada pelo SQL Editor (ver [DEPLOY.md](./DEPLOY.md)).
 
 A senha do banco foi gerada pelo painel e não foi guardada. Se precisar (CLI ou `psql`), redefina em Project Settings > Database.
 
@@ -90,6 +96,7 @@ Feito em 15/11/2026. Endereço de produção: **https://treino-a-dois-theta.verc
 - [x] Projeto `treino-a-dois` criado e publicado **pela CLI**, a partir da pasta local (`npx vercel deploy --prod`).
 - [x] Variáveis `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY` cadastradas em Production e Preview.
 - [ ] **Ligar o repositório do GitHub ao projeto** para publicar sozinho a cada push. Hoje não está ligado: falta instalar o aplicativo da Vercel no GitHub (em vercel.com/new > GitHub > Install) e depois rodar `npx vercel git connect`. Enquanto isso, cada atualização precisa de um `npx vercel deploy --prod`.
+- [ ] Opcional: variável `VITE_GOOGLE_MAPS_API_KEY` (busca de academias pelo nome no Google Maps).
 - [ ] Escolher a branch de produção quando ligar o GitHub. O repositório já tem `main`, hoje igual à `develop`.
 
 ### C. iPhone (instalar como app)
@@ -98,7 +105,7 @@ Feito em 15/11/2026. Endereço de produção: **https://treino-a-dois-theta.verc
 - [ ] Abrir **https://treino-a-dois-theta.vercel.app** no **Safari** (precisa ser o Safari, não o Chrome do iPhone).
 - [ ] Compartilhar > **Adicionar à Tela de Início**.
 - [ ] Abrir pelo **ícone da tela inicial**, não pelo Safari. Só assim o app roda em tela cheia.
-- [ ] No primeiro check-in, permitir o acesso à câmera. Se negar sem querer: Ajustes > Safari > Câmera (ou Ajustes > o app).
+- [ ] No primeiro check-in, permitir o acesso à câmera e à localização ("Durante o Uso"). Se negar sem querer: Ajustes > Safari > Câmera (ou Ajustes > o app).
 - [ ] Os dois precisam fazer isso, cada um no seu iPhone.
 
 ### D. Primeiro uso
@@ -106,6 +113,7 @@ Feito em 15/11/2026. Endereço de produção: **https://treino-a-dois-theta.verc
 - [ ] Uma pessoa cria a conta e o grupo.
 - [ ] Em **Mais > Grupo e regras**, tocar em **Compartilhar** e mandar o convite.
 - [ ] A outra cria a conta e entra com o código (ou abre o link).
+- [ ] Cadastrar a academia em **Mais > Academias**. Sem academia, o check-in fica bloqueado (ou desligue a regra em Grupo e regras).
 - [ ] Conferir a roleta e a faixa de multa. Dá para editar tudo no app.
 - [ ] A meta só começa a valer na **segunda-feira seguinte** à criação do grupo (ou no mesmo dia, se for segunda).
 
@@ -186,6 +194,7 @@ DATABASE_URL=postgres://postgres@localhost:5432/postgres npm run test:db   # pre
 - [ ] **Lembretes por notificação** (o briefing deixou para depois). Exige push no PWA: iOS 16.4+, app instalado, permissão do usuário e um envio pelo servidor (Edge Function do Supabase + Web Push). Ideias: lembrete no fim do dia se ainda não treinou; aviso quando a semana fecha e há punição.
 - [ ] **Aviso de fechamento**: hoje o resultado aparece como cartão na tela Início quando a pessoa abre o app. Sem push, ninguém é avisado sozinho.
 - [ ] Decidir e implementar as pendências do briefing (seção 6).
+- [ ] Melhorias planejadas (checagem de check-in repetido, GPS só com a regra ligada, pedido de revisão, mapa, etc.): ver [MELHORIAS.md](./MELHORIAS.md), com contexto e ordem sugerida.
 
 ### Prioridade 3: qualidade e manutenção
 
@@ -217,7 +226,7 @@ O banco já guarda regras por grupo, então a base existe. Falta:
 | Multa por semana ou por treino faltante | **Por semana**, um valor sorteado | Mudar exige alterar `close_week` |
 | Exceção reduz a meta em 1? Limite por mês? | Reduz 1 por dia útil, **sem limite mensal**; não reduz se a pessoa treinou naquele dia | Pode virar abuso. Vale pôr um limite? |
 | Treino no domingo conta | **Não** (check-in bloqueado); configurável em Grupo e regras | Confirmar |
-| Registrar a localização da academia | **Não**; a foto tem carimbo de dia, hora e grupo | Vale a pena? |
+| Registrar a localização da academia | **Sim**, até 300 m de uma academia do grupo; desligável por grupo | Ajustar o raio se o GPS indoor atrapalhar (`gym_radius_m()` no banco e `GYM_RADIUS_M` no app) |
 | Recompensa quando os dois batem a meta | **Não** existe | Ex.: 4 semanas seguidas dão um prêmio da caixinha |
 | Nome do app | "Treino a Dois" (provisório) | Definir; trocar em `vite.config.ts`, `index.html` e `public/favicon.svg` |
 | Branch `main` | Existe e está igual à `develop` | Usar `main` como produção na Vercel e levar `develop` por PR? |
@@ -228,6 +237,8 @@ O banco já guarda regras por grupo, então a base existe. Falta:
 ## 7. Riscos e limitações conhecidos
 
 - **A foto "tirada na hora" não é garantida de forma absoluta [Certa].** A câmera ao vivo (`getUserMedia`) não deixa escolher da galeria, e a data e hora vêm do servidor. O plano B com câmera nativa só checa que o arquivo foi modificado nos últimos 5 minutos, o que dá para burlar. Para um casal, o parceiro vendo o feed é o fiscal real, como o briefing diz.
+- **GPS dá para falsificar [Certa].** Apps de localização falsa (mais comuns no Android) enganam a verificação. O banco impede só o atalho de mandar check-in sem passar pelo GPS do aparelho. Dentro de prédio o GPS pode errar 50 m ou mais; por isso o raio é 300 m e o banco recusa leituras com margem acima de 500 m.
+- **Qualquer membro cadastra ou remove academias.** Dá para cadastrar a própria casa como academia; o parceiro vê quem cadastrou na lista.
 - **Projeto gratuito do Supabase pausa após cerca de 7 dias sem uso [Provável].** Num app usado todo dia isso não deve acontecer, mas se pausar o fechamento da semana não roda. Abrir o painel e reativar resolve.
 - **O fechamento depende do `pg_cron`.** Se o agendamento falhar, qualquer membro que abrir o app dispara `catch_up_weeks`, que fecha as semanas vencidas. A função é idempotente (rodar duas vezes não duplica nada).
 - **Fuso horário:** o grupo guarda o fuso de quem o criou (`America/Sao_Paulo` por padrão). Viagem para outro fuso não muda a regra do grupo.
@@ -253,6 +264,8 @@ PROGRESSO.md              este arquivo
 CLAUDE.md                 instruções e contexto para o Claude Code
 README.md                 guia de instalação e decisões provisórias
 scripts/e2e-supabase.mjs  teste de ponta a ponta contra o Supabase real
+DEPLOY.md                 passo a passo para colocar em produção
+MELHORIAS.md              melhorias planejadas, com contexto e ordem sugerida
 src/domain/               regras puras e testes (datas, meta, exceções, sequência)
 src/data/                 consultas ao Supabase (React Query) e tipos
 src/app/                  login e grupo atual (contextos)
@@ -260,7 +273,7 @@ src/components/           layout com abas e componentes de interface
 src/pages/                uma tela por arquivo
 src/lib/                  cliente Supabase, tratamento de foto, convites
 supabase/migrations/      esquema, fotos (Storage) e agendamento (pg_cron)
-supabase/tests/           testes das regras do banco
+supabase/tests/           testes das regras do banco (01) e da localização (02)
 public/                   ícones do app
 vite.config.ts            configuração do Vite e do PWA (nome, cores, ícones)
 vercel.json               redirecionamento das rotas para o app
@@ -268,7 +281,7 @@ vercel.json               redirecionamento das rotas para o app
 
 ### Tabelas do banco
 
-`profiles`, `groups`, `group_members`, `punishments`, `checkins`, `exceptions`, `jokers`, `weeks`, `week_results`. Bucket de fotos: `checkins` (privado, caminho `grupo/usuário/arquivo.jpg`).
+`profiles`, `groups`, `group_members`, `gyms`, `punishments`, `checkins`, `exceptions`, `jokers`, `weeks`, `week_results`. Bucket de fotos: `checkins` (privado, caminho `grupo/usuário/arquivo.jpg`).
 
 Funções principais: `create_group`, `join_group`, `leave_group`, `close_week`, `close_due_weeks`, `catch_up_weeks`, `set_debt_status`.
 
