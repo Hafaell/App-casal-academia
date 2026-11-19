@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react'
+import { Suspense, lazy, useState, type FormEvent } from 'react'
 import { useGroup } from '@/app/GroupProvider'
 import { Button, Card, EmptyState, Field, PageHeader, Spinner, inputClass, useToast } from '@/components/ui'
 import { useAddGym, useGyms, useRemoveGym } from '@/data/queries'
@@ -9,6 +9,9 @@ import { hasGoogleMaps, searchPlaces, type PlaceResult } from '@/lib/googleMaps'
 import { getPosition, locationErrorMessage, type Position } from '@/lib/location'
 import { placeFromSharedText } from '@/lib/mapsLink'
 import { errorMessage } from '@/lib/supabase'
+
+// O mapa (Leaflet) só é baixado quando existe academia para mostrar.
+const GymsMap = lazy(() => import('@/components/GymsMap'))
 
 const mapsLink = (g: { lat: number; lng: number; place_id?: string | null }) =>
   g.place_id
@@ -187,6 +190,14 @@ export function GymsPage() {
                 />
               ))}
             </ul>
+          )}
+          {gyms.data && gyms.data.length > 0 && (
+            <div className="mt-3">
+              <Suspense fallback={<div className="h-64 animate-pulse rounded-xl bg-surface-2" />}>
+                <GymsMap gyms={gyms.data} here={here} />
+              </Suspense>
+              <p className="mt-1 text-xs text-muted">O círculo verde é onde o check-in vale ({GYM_RADIUS_M} m).</p>
+            </div>
           )}
           {gyms.data && gyms.data.length > 0 && !here && (
             <Button variant="ghost" className="mt-2 w-full" onClick={locate} loading={locating}>

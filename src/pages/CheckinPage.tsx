@@ -2,10 +2,11 @@ import { useEffect, useRef, useState, type ChangeEvent, type ReactNode } from 'r
 import { Link, useNavigate } from 'react-router'
 import { useGroup } from '@/app/GroupProvider'
 import { Button, useToast } from '@/components/ui'
-import { useCreateCheckin, useGyms } from '@/data/queries'
+import { useCheckins, useCreateCheckin, useGyms } from '@/data/queries'
 import type { Gym } from '@/data/types'
 import { dayMonth, localTime, weekdayShort } from '@/domain/dates'
-import { GYM_RADIUS_M, checkLocation, formatDistance, type LocationCheck } from '@/domain/geo'
+import { canShoot, gateFor, type Gate } from '@/domain/checkinGate'
+import { GYM_RADIUS_M, formatDistance } from '@/domain/geo'
 import { loadImage, prepareCheckinPhoto } from '@/lib/image'
 import { locationErrorMessage, watchPosition, type Position } from '@/lib/location'
 import { errorMessage } from '@/lib/supabase'
@@ -19,6 +20,7 @@ export function CheckinPage() {
   const { group, userId, today } = useGroup()
   const create = useCreateCheckin(group.id, userId)
   const gyms = useGyms(group.id)
+  const todays = useCheckins(group.id, today, today)
   const navigate = useNavigate()
   const toast = useToast()
 
@@ -38,26 +40,41 @@ export function CheckinPage() {
   useEffect(() => {
     if (noGymYet) navigate('/academias', { replace: true })
   }, [noGymYet, navigate])
-  const check: LocationCheck<Gym> | null = position && gyms.data ? checkLocation(position, gyms.data) : null
-  const locationOk = !required || check?.status === 'ok'
+
+  const trainedToday = (todays.data ?? []).some((c) => c.user_id === userId)
+  const gate = gateFor<Gym>({
+    required,
+    trainedToday,
+    gyms: { status: gyms.data ? 'ready' : gyms.isError ? 'error' : 'loading', list: gyms.data ?? [] },
+    position,
+    gpsError,
+  })
+  const locationOk = canShoot(gate)
+
+  // Segunda barreira contra check-in repetido (a primeira é o botão da tela Início). Não dispara
+  // durante o envio: o check-in recém-criado também faz "trainedToday" virar verdadeiro.
+  useEffect(() => {
+    if (!trainedToday || create.isPending || create.isSuccess) return
+    toast('Você já registrou o treino de hoje 💪')
+    navigate('/', { replace: true })
+  }, [trainedToday, create.isPending, create.isSuccess, navigate, toast])
 
   const stamp = () => {
-    const where = check?.status === 'ok' ? check.place.name : group.name
+    const where = gate.kind === 'ok' ? gate.place.name : group.name
     return `${weekdayShort(today)} ${dayMonth(today)} · ${localTime(new Date(), group.timezone)} · ${where}`
   }
 
-  // GPS ligado enquanto a tela estiver aberta: o aviso de distância atualiza sozinho.
-  useEffect(
-    () =>
-      watchPosition(
-        (p) => {
-          setPosition(p)
-          setGpsError('')
-        },
-        (err) => setGpsError(locationErrorMessage(err)),
-      ),
-    [],
-  )
+  // GPS ligado enquanto a tela estiver aberta e só se a regra exigir: o aviso de distância atualiza sozinho.
+  useEffect(() => {
+    if (!required) return
+    return watchPosition(
+      (p) => {
+        setPosition(p)
+        setGpsError('')
+      },
+      (err) => setGpsError(locationErrorMessage(err)),
+    )
+  }, [required])
 
   // Liga a câmera ao vivo. Sem câmera ao vivo não há como escolher foto antiga.
   useEffect(() => {
@@ -162,7 +179,7 @@ export function CheckinPage() {
         <span className="w-16" />
       </div>
 
-      <LocationBanner required={required} check={check} position={position} gpsError={gpsError} loadingGyms={gyms.isLoading} />
+      <LocationBanner gate={gate} onRetry={() => void gyms.refetch()} retrying={gyms.isFetching} />
 
       <div className="relative flex flex-1 items-center justify-center overflow-hidden">
         {photo ? (
@@ -210,7 +227,9 @@ export function CheckinPage() {
               aria-label="Tirar foto"
               onClick={capture}
               disabled={!cameraReady || busy || !locationOk}
-              className="h-[76px] w-[76px] rounded-full border-4 border-white bg-white/20 transition active:scale-95 disabled:opacity-40"
+              className={`h-[76px] w-[76px] rounded-full border-4 transition active:scale-95 disabled:opacity-40 ${
+                locationOk ? 'border-accent bg-accent/30' : 'border-white/40 bg-white/10'
+              }`}
             />
             <button
               aria-label="Trocar câmera"
@@ -226,51 +245,59 @@ export function CheckinPage() {
   )
 }
 
-/** Faixa com o estado do GPS: dentro do raio, longe, sem academia ou buscando. */
-function LocationBanner({
-  required,
-  check,
-  position,
-  gpsError,
-  loadingGyms,
-}: {
-  required: boolean
-  check: LocationCheck<Gym> | null
-  position: Position | null
-  gpsError: string
-  loadingGyms: boolean
-}) {
+/** Faixa com o estado do check-in: dentro do raio, longe, sem academia, buscando… */
+function LocationBanner({ gate, onRetry, retrying }: { gate: Gate<Gym>; onRetry: () => void; retrying: boolean }) {
   let tone: 'ok' | 'warn' | 'wait' = 'wait'
   let text: ReactNode = 'Buscando sua localização…'
 
-  if (check?.status === 'no-gym') {
-    tone = 'warn'
-    text = (
-      <>
-        Nenhuma academia cadastrada.{' '}
-        <Link to="/academias" className="underline">
-          Cadastrar agora
-        </Link>
-      </>
-    )
-  } else if (gpsError && !position) {
-    tone = 'warn'
-    text = gpsError
-  } else if (!position || loadingGyms) {
-    tone = 'wait'
-  } else if (check?.status === 'ok') {
-    tone = 'ok'
-    text = `📍 ${check.place.name} · ${formatDistance(check.distance)}`
-  } else if (check?.status === 'far') {
-    tone = 'warn'
-    text = `Você está a ${formatDistance(check.distance)} de ${check.place.name}. Precisa estar a até ${GYM_RADIUS_M} m.`
-  } else if (check?.status === 'weak-signal') {
-    tone = 'wait'
-    text = `GPS impreciso (±${Math.round(check.accuracy)} m). Aguarde alguns segundos…`
+  switch (gate.kind) {
+    case 'ok':
+      tone = 'ok'
+      text = `📍 ${gate.place.name} · ${formatDistance(gate.distance)}`
+      break
+    case 'far':
+      tone = 'warn'
+      text = `Você está a ${formatDistance(gate.distance)} de ${gate.place.name}. Precisa estar a até ${GYM_RADIUS_M} m.`
+      break
+    case 'no-gym':
+      tone = 'warn'
+      text = (
+        <>
+          Nenhuma academia cadastrada.{' '}
+          <Link to="/academias" className="underline">
+            Cadastrar agora
+          </Link>
+        </>
+      )
+      break
+    case 'gyms-error':
+      tone = 'warn'
+      text = (
+        <>
+          Não consegui carregar as academias.{' '}
+          <button className="underline" onClick={onRetry} disabled={retrying}>
+            {retrying ? 'Tentando…' : 'Tentar de novo'}
+          </button>
+        </>
+      )
+      break
+    case 'gps-error':
+      tone = 'warn'
+      text = gate.message
+      break
+    case 'weak-signal':
+      text = `GPS impreciso (±${Math.round(gate.accuracy)} m). Aguarde alguns segundos…`
+      break
+    case 'free':
+      text = gate.place ? `📍 ${gate.place.name} · ${formatDistance(gate.distance ?? 0)}` : 'Este grupo não exige estar na academia.'
+      break
+    case 'trained':
+      text = 'Você já registrou o treino de hoje.'
+      break
+    case 'gyms-loading':
+    case 'waiting-gps':
+      break
   }
-
-  // Com a regra desligada, o aviso só informa (não bloqueia).
-  if (!required && tone === 'warn') tone = 'wait'
 
   const styles = {
     ok: 'bg-accent/90 text-accent-ink',

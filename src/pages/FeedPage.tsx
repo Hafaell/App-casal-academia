@@ -93,7 +93,7 @@ export function FeedPage() {
 function useMemberLook(userId: string) {
   const { members, nameOf } = useGroup()
   const idx = members.findIndex((m) => m.user_id === userId)
-  return { name: nameOf(userId), color: memberColor(Math.max(0, idx)) }
+  return { name: nameOf(userId), color: memberColor(idx) }
 }
 
 function CheckinCard({ checkin, url, onOpen }: { checkin: Checkin; url?: string; onOpen: () => void }) {
@@ -105,7 +105,7 @@ function CheckinCard({ checkin, url, onOpen }: { checkin: Checkin; url?: string;
 
   return (
     <Card className="overflow-hidden !p-0">
-      <div className="flex items-center gap-3 p-3">
+      <div className="flex items-center gap-3 border-l-4 p-3" style={{ borderColor: color }}>
         <Avatar name={name} color={color} size={32} />
         <div className="flex-1">
           <p className="text-sm font-semibold">{name} treinou 💪</p>

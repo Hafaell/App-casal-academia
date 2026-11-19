@@ -58,7 +58,9 @@ export function Button({
 
 const MEMBER_COLORS = ['#c6f432', '#38bdf8', '#f472b6', '#fbbf24', '#a78bfa', '#34d399']
 
+/** Cor do membro pela posição na lista. Quem saiu do grupo (índice -1) fica em cinza. */
 export function memberColor(index: number): string {
+  if (index < 0) return '#8b97a8'
   return MEMBER_COLORS[index % MEMBER_COLORS.length]
 }
 

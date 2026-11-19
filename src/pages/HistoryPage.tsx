@@ -42,7 +42,7 @@ export function HistoryPage() {
     return map
   }, [checkins.data])
 
-  const colorOf = (uid: string) => memberColor(Math.max(0, members.findIndex((m) => m.user_id === uid)))
+  const colorOf = (uid: string) => memberColor(members.findIndex((m) => m.user_id === uid))
 
   const days: string[] = []
   for (let d = gridStart; d <= gridEnd; d = addDays(d, 1)) days.push(d)
@@ -109,7 +109,14 @@ export function HistoryPage() {
                 >
                   {thumb && <img src={thumb} alt="" className="absolute inset-0 h-full w-full object-cover opacity-60" loading="lazy" />}
                   <span className="relative ml-1 text-[11px] font-semibold drop-shadow">{Number(d.slice(8))}</span>
-                  <span className="absolute bottom-1 left-1 flex gap-0.5">
+                  {list.length > 0 && (
+                    <span className="absolute inset-x-0 bottom-0 flex h-1">
+                      {list.map((c) => (
+                        <span key={c.id} className="flex-1" style={{ background: colorOf(c.user_id) }} />
+                      ))}
+                    </span>
+                  )}
+                  <span className="absolute bottom-2 left-1 flex gap-0.5">
                     {list.map((c) => (
                       <span key={c.id} className="h-2 w-2 rounded-full ring-1 ring-black/40" style={{ background: colorOf(c.user_id) }} />
                     ))}
@@ -177,7 +184,12 @@ export function HistoryPage() {
               {dayCheckins.map((c) => {
                 const url = photos.data?.get(c.photo_path)
                 return (
-                  <button key={c.id} className="overflow-hidden rounded-xl bg-surface-2 text-left" onClick={() => url && setViewing(url)}>
+                  <button
+                    key={c.id}
+                    className="overflow-hidden rounded-xl border-2 bg-surface-2 text-left"
+                    style={{ borderColor: colorOf(c.user_id) }}
+                    onClick={() => url && setViewing(url)}
+                  >
                     {url && <img src={url} alt="" className="aspect-[4/5] w-full object-cover" />}
                     <p className="px-2 py-1.5 text-xs">
                       {nameOf(c.user_id)} · {localTime(c.created_at, group.timezone)}
