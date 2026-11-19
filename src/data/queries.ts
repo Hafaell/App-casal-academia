@@ -4,6 +4,7 @@ import { nextReactionAction, type CheckinKind, type ReactionEmoji, type Reaction
 import type { ExceptionReason } from '@/domain/rules'
 import type {
   Checkin,
+  CheckinReport,
   ExceptionDay,
   Group,
   GroupRulesUpdate,
@@ -169,6 +170,17 @@ export function useGyms(gid: string) {
   })
 }
 
+/** Treinos cancelados por report (o feed mostra quem reportou e o motivo). */
+export function useReports(gid: string, from: string) {
+  return useQuery({
+    queryKey: ['reports', gid, from],
+    queryFn: async () =>
+      must(
+        await supabase.from('checkin_reports').select('*').eq('group_id', gid).gte('day', from).order('created_at', { ascending: false }),
+      ) as CheckinReport[],
+  })
+}
+
 /** Reações das fotos já carregadas (busca por lista de check-ins, não por embed). */
 export function useReactions(gid: string, checkinIds: string[]) {
   const ids = [...new Set(checkinIds)].sort()
@@ -246,6 +258,16 @@ export function useReact(userId: string) {
       else must(await supabase.from('reactions').delete().eq('id', action.id))
     },
     onSuccess: () => invalidate('reactions'),
+  })
+}
+
+/** Outro membro cancela o treino (a regra e o motivo ficam registrados no banco). */
+export function useReportCheckin() {
+  const invalidate = useInvalidate()
+  return useMutation({
+    mutationFn: async ({ checkinId, reason }: { checkinId: string; reason: string }) =>
+      must(await supabase.rpc('report_checkin', { p_checkin: checkinId, p_reason: reason })),
+    onSuccess: () => invalidate('checkins', 'reactions', 'reports'),
   })
 }
 

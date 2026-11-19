@@ -8,6 +8,41 @@ Legenda de confiança: **[Certa]**, **[Provável]**, **[Adivinhando]**.
 
 ---
 
+## Status em 19/11/2026
+
+| # | Melhoria | Status |
+| --- | --- | --- |
+| 1 | Aviso de check-in repetido | **Feito.** A tela Início já escondia o botão; agora a tela de check-in também avisa e volta |
+| 2 | GPS só com a regra ligada | **Feito** |
+| 3 | Erro ao carregar academias | **Feito.** Bloqueia, mostra a mensagem e o botão "Tentar de novo" |
+| 4 | Separar `CheckinPage` em hooks | **Feito em parte.** A decisão do estado (perto, longe, sem academia, erro...) virou função pura em `src/domain/checkinGate.ts`, com testes. A câmera continua na tela: extrair `useCamera` fica para quando mexerem nela de novo |
+| 5 | Testes de interface | **Parcial.** Os 5 casos (perto, longe, sem academia, já treinou, GPS negado) estão testados na lógica (`checkinGate.test.ts`). Playwright ainda não, pois precisa de um Supabase de teste |
+| 6 | Foto sem internet | **Adiado de propósito.** O servidor decide o dia pela hora do envio; reenviar no dia seguinte contaria no dia errado e mexe em multa. A foto já fica na tela se o envio falhar |
+| 7 | Mapa na tela Academias | **Feito** com Leaflet e OpenStreetMap (círculo de 100 m, sua posição, atribuição) |
+| 8 | Botão de foto colorido | **Feito** (verde perto, cinza bloqueado) |
+| 9 | Cor por pessoa | **Feito** no Histórico (barra colorida no dia e borda na foto) e no Feed. Quem saiu do grupo aparece em cinza |
+| 10 | Revisar a tela Início | **Não feito.** Precisa ver a tela num iPhone |
+| 11 | Pedido de revisão | **Trocado pelo pedido do casal:** outro membro pode **reportar** a foto e o treino é cancelado (ver abaixo) |
+| 12 | Cartão do resumo semanal | **Feito.** Botão "Compartilhar cartão da semana" no Feed, em cada semana fechada |
+| 13 | Reações nas fotos | **Feito** (💪 🔥 👏 😍, uma por pessoa) |
+| 14 | Tipo de treino | **Feito**, opcional, escolhido na prévia da foto |
+| 15 | Lembrete por horário | **Adiado.** Depende de notificações push (chaves, inscrição e Edge Function) |
+
+### Reportar um check-in (pedido do casal)
+
+A regra do GPS é a definitiva. Se alguém burlar, outro membro vê a foto no Feed e toca em **🚩 Reportar**, escrevendo o motivo.
+
+- O treino é **cancelado**: o check-in é apagado, então a meta, a sequência e a multa se recalculam sozinhas.
+- Fica um registro para o grupo todo (`checkin_reports`): quem reportou, o motivo e a foto. Aparece no Feed como "🚩 cancelado por…".
+- **Só na semana ainda aberta.** Semana fechada já virou multa e caixinha.
+- Ninguém reporta o próprio treino (para isso existe Apagar).
+- Quem teve o treino cancelado pode registrar outro no mesmo dia, passando de novo pela regra do GPS.
+- Em grupo de 2 pessoas, o report é decisão de uma só. Se virar abuso, o caminho é exigir a concordância do autor ou de um dono do grupo.
+- A foto cancelada continua guardada no armazenamento como prova; só o check-in some.
+- Migração: `20261119000003_report_checkin.sql`. Teste do banco: `supabase/tests/04_reports.sql` (escrito, **não executado**: não há `psql` nesta máquina).
+
+---
+
 ## Ordem sugerida
 
 1. Avisar check-in repetido antes de abrir a câmera
@@ -68,7 +103,7 @@ Legenda de confiança: **[Certa]**, **[Provável]**, **[Adivinhando]**.
 - **Ideia:** mostrar as academias num mapa, com um círculo de 100 m em volta de cada uma.
 - **Como:** Leaflet com os tiles do OpenStreetMap, que não exigem chave extra. A atribuição do OpenStreetMap precisa aparecer no mapa. **[Provável]**
 - **Onde:** `src/pages/GymsPage.tsx`.
-- **Decidir:** usar Leaflet ou o próprio Google Maps, que já é usado na busca de academias.
+- **Decidido:** Leaflet (o Google Maps exigiria a chave paga).
 
 ### 8. Cor do botão de foto conforme a distância
 

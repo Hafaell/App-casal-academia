@@ -50,6 +50,20 @@ export interface Checkin {
   kind: CheckinKind | null
 }
 
+export interface CheckinReport {
+  id: string
+  group_id: string
+  checkin_id: string
+  author_id: string | null
+  reporter_id: string | null
+  day: string
+  reason: string
+  photo_path: string
+  gym_name: string | null
+  distance_m: number | null
+  created_at: string
+}
+
 export interface Reaction {
   id: string
   checkin_id: string

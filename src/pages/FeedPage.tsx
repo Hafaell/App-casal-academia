@@ -1,10 +1,10 @@
 import { useMemo, useState } from 'react'
 import { useGroup } from '@/app/GroupProvider'
-import { Avatar, Button, Card, EmptyState, PageHeader, PhotoViewer, Spinner, memberColor, useToast } from '@/components/ui'
+import { Avatar, Button, Card, EmptyState, PageHeader, PhotoViewer, Sheet, Spinner, inputClass, memberColor, useToast } from '@/components/ui'
 import { formatDistance } from '@/domain/geo'
-import { useCheckins, useDeleteCheckin, useExceptions, useJokers, usePhotoUrls, useReact, useReactions, useWeekResults, useWeeks } from '@/data/queries'
-import type { Checkin, ExceptionDay, Joker, Reaction, Week, WeekResult } from '@/data/types'
-import { addDays, dayMonth, localDate, localTime, weekRange, weekdayShort } from '@/domain/dates'
+import { useCheckins, useDeleteCheckin, useExceptions, useJokers, usePhotoUrls, useReact, useReactions, useReportCheckin, useReports, useWeekResults, useWeeks } from '@/data/queries'
+import type { Checkin, CheckinReport, ExceptionDay, Joker, Reaction, Week, WeekResult } from '@/data/types'
+import { addDays, dayMonth, localDate, localTime, mondayOf, weekRange, weekdayShort } from '@/domain/dates'
 import { CHECKIN_KINDS, REACTION_EMOJIS, summarizeReactions, type ReactionEmoji } from '@/domain/reactions'
 import { EXCEPTION_REASONS, formatMoney } from '@/domain/rules'
 import { buildSummaryCard, shareImage } from '@/lib/summaryCard'
@@ -15,6 +15,7 @@ type FeedItem =
   | { type: 'exception'; at: string; data: ExceptionDay }
   | { type: 'joker'; at: string; data: Joker }
   | { type: 'week'; at: string; data: Week }
+  | { type: 'report'; at: string; data: CheckinReport }
 
 const PAGE_DAYS = 45
 
@@ -28,9 +29,11 @@ export function FeedPage() {
   const jokers = useJokers(group.id)
   const weeks = useWeeks(group.id)
   const results = useWeekResults(group.id)
-  const photos = usePhotoUrls((checkins.data ?? []).map((c) => c.photo_path))
+  const reports = useReports(group.id, from)
+  const photos = usePhotoUrls([...(checkins.data ?? []).map((c) => c.photo_path), ...(reports.data ?? []).map((r) => r.photo_path)])
   const reactions = useReactions(group.id, (checkins.data ?? []).map((c) => c.id))
   const [viewing, setViewing] = useState<Checkin | null>(null)
+  const [reporting, setReporting] = useState<Checkin | null>(null)
 
   const items = useMemo<FeedItem[]>(() => {
     const list: FeedItem[] = [
@@ -38,9 +41,10 @@ export function FeedPage() {
       ...(exceptions.data ?? []).map((e) => ({ type: 'exception' as const, at: e.created_at, data: e })),
       ...(jokers.data ?? []).filter((j) => j.week_start >= from).map((j) => ({ type: 'joker' as const, at: j.created_at, data: j })),
       ...(weeks.data ?? []).filter((w) => w.week_start >= from).map((w) => ({ type: 'week' as const, at: w.closed_at, data: w })),
+      ...(reports.data ?? []).map((r) => ({ type: 'report' as const, at: r.created_at, data: r })),
     ]
     return list.sort((a, b) => b.at.localeCompare(a.at))
-  }, [checkins.data, exceptions.data, jokers.data, weeks.data, from])
+  }, [checkins.data, exceptions.data, jokers.data, weeks.data, reports.data, from])
 
   const loading = checkins.isLoading || exceptions.isLoading
 
@@ -62,11 +66,15 @@ export function FeedPage() {
                     checkin={item.data}
                     url={photos.data?.get(item.data.photo_path)}
                     reactions={(reactions.data ?? []).filter((r) => r.checkin_id === item.data.id)}
+                    canReport={!(weeks.data ?? []).some((w) => w.week_start === mondayOf(item.data.day))}
+                    onReport={() => setReporting(item.data)}
                     onOpen={() => setViewing(item.data)}
                   />
                 )
               case 'exception':
                 return <ExceptionCard key={`e-${item.data.id}`} exception={item.data} />
+              case 'report':
+                return <ReportCard key={`r-${item.data.id}`} report={item.data} url={photos.data?.get(item.data.photo_path)} />
               case 'joker':
                 return <JokerCard key={`j-${item.data.id}`} joker={item.data} />
               case 'week':
@@ -88,6 +96,7 @@ export function FeedPage() {
           </Button>
         )}
       </div>
+      <ReportSheet checkin={reporting} onClose={() => setReporting(null)} />
       <PhotoViewer
         url={viewing ? (photos.data?.get(viewing.photo_path) ?? null) : null}
         onClose={() => setViewing(null)}
@@ -102,7 +111,21 @@ function useMemberLook(userId: string) {
   return { name: nameOf(userId), color: memberColor(idx) }
 }
 
-function CheckinCard({ checkin, url, reactions, onOpen }: { checkin: Checkin; url?: string; reactions: Reaction[]; onOpen: () => void }) {
+function CheckinCard({
+  checkin,
+  url,
+  reactions,
+  canReport,
+  onReport,
+  onOpen,
+}: {
+  checkin: Checkin
+  url?: string
+  reactions: Reaction[]
+  canReport: boolean
+  onReport: () => void
+  onOpen: () => void
+}) {
   const { group, userId, today } = useGroup()
   const { name, color } = useMemberLook(checkin.user_id)
   const del = useDeleteCheckin()
@@ -135,6 +158,11 @@ function CheckinCard({ checkin, url, reactions, onOpen }: { checkin: Checkin; ur
             }}
           >
             Apagar
+          </button>
+        )}
+        {!canDelete && checkin.user_id !== userId && canReport && (
+          <button className="text-xs text-muted" onClick={onReport}>
+            🚩 Reportar
           </button>
         )}
       </div>
@@ -173,6 +201,77 @@ function ReactionBar({ checkinId, reactions }: { checkinId: string; reactions: R
         )
       })}
     </div>
+  )
+}
+
+/** Treino cancelado por outro membro: fica o aviso, o motivo e a foto. */
+function ReportCard({ report, url }: { report: CheckinReport; url?: string }) {
+  const { nameOf } = useGroup()
+  return (
+    <Card className="border-danger/30 bg-danger/5">
+      <div className="flex items-start gap-3">
+        {url && <img src={url} alt="" loading="lazy" className="h-16 w-12 shrink-0 rounded-lg object-cover opacity-60 grayscale" />}
+        <div className="text-sm">
+          <p>
+            🚩 O treino de <b>{report.author_id ? nameOf(report.author_id) : 'alguém'}</b> de {weekdayShort(report.day)} {dayMonth(report.day)} foi
+            cancelado por <b>{report.reporter_id ? nameOf(report.reporter_id) : 'um membro'}</b>.
+          </p>
+          <p className="text-muted">Motivo: “{report.reason}”</p>
+          <p className="text-xs text-muted">Esse dia não contou para a meta.</p>
+        </div>
+      </div>
+    </Card>
+  )
+}
+
+/** Pergunta o motivo antes de cancelar o treino de outra pessoa. */
+function ReportSheet({ checkin, onClose }: { checkin: Checkin | null; onClose: () => void }) {
+  const { nameOf } = useGroup()
+  const report = useReportCheckin()
+  const toast = useToast()
+  const [reason, setReason] = useState('')
+
+  if (!checkin) return <Sheet open={false} onClose={onClose}>{null}</Sheet>
+
+  const submit = () =>
+    report.mutate(
+      { checkinId: checkin.id, reason },
+      {
+        onSuccess: () => {
+          toast('Treino cancelado')
+          setReason('')
+          onClose()
+        },
+        onError: (err) => toast(errorMessage(err), 'error'),
+      },
+    )
+
+  return (
+    <Sheet open onClose={onClose}>
+      <div className="space-y-3">
+        <h3 className="text-lg font-semibold">Reportar este treino</h3>
+        <p className="text-sm text-muted">
+          O treino de <b className="text-ink">{nameOf(checkin.user_id)}</b> será <b className="text-ink">cancelado</b> e deixa de contar
+          na meta da semana. O grupo todo vê quem reportou e o motivo.
+        </p>
+        <textarea
+          className={inputClass}
+          rows={3}
+          maxLength={200}
+          placeholder="Motivo (ex.: a foto não foi tirada na academia)"
+          value={reason}
+          onChange={(e) => setReason(e.target.value)}
+        />
+        <div className="flex gap-2">
+          <Button variant="ghost" onClick={onClose}>
+            Voltar
+          </Button>
+          <Button variant="danger" className="flex-1" onClick={submit} loading={report.isPending} disabled={!reason.trim()}>
+            Cancelar este treino
+          </Button>
+        </div>
+      </div>
+    </Sheet>
   )
 }
 
