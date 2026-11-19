@@ -99,6 +99,7 @@ Feito em 15/11/2026. Endereço de produção: **https://treino-a-dois-theta.verc
 - [x] **GitHub ligado ao projeto** em 19/11/2026: push na `main` publica em produção; push em outras branches gera Preview.
 - [ ] Opcional: variável `VITE_GOOGLE_MAPS_API_KEY` (busca de academias pelo nome no Google Maps).
 - [x] Branch de produção: `main`. Fluxo: trabalhar na `develop` e levar para a `main` para publicar.
+- [x] **Migração 9 (academias por pessoa):** `20261119000005_gyms_per_person.sql` aplicada em 19/11/2026 e conferida.
 - [x] **Migrações 6 e 7** (`20261119000002_reactions_and_kind.sql` e `20261119000003_report_checkin.sql`) aplicadas pelo SQL Editor em 19/11/2026 e conferidas por consulta (RLS, permissões e emojis).
 - [x] **Migração 5 (raio 100 m):** `20261119000001_gym_radius_100.sql` aplicada pelo SQL Editor em 19/11/2026 e conferida (`gym_radius_m()` = 100).
 
@@ -241,7 +242,7 @@ O banco já guarda regras por grupo, então a base existe. Falta:
 
 - **A foto "tirada na hora" não é garantida de forma absoluta [Certa].** A câmera ao vivo (`getUserMedia`) não deixa escolher da galeria, e a data e hora vêm do servidor. O plano B com câmera nativa só checa que o arquivo foi modificado nos últimos 5 minutos, o que dá para burlar. Para um casal, o parceiro vendo o feed é o fiscal real, como o briefing diz.
 - **GPS dá para falsificar [Certa].** Apps de localização falsa (mais comuns no Android) enganam a verificação. O banco impede só o atalho de mandar check-in sem passar pelo GPS do aparelho. Dentro de prédio o GPS pode errar 50 m ou mais. O raio é 100 m (pedido do usuário em 19/11/2026) e o banco recusa leituras com margem acima de 500 m; se check-ins verdadeiros forem recusados, avaliar subir o raio ou cadastrar a academia por "Estou na academia agora", que é o jeito mais preciso.
-- **Qualquer membro cadastra ou remove academias.** Dá para cadastrar a própria casa como academia; o parceiro vê quem cadastrou na lista.
+- **Academias por pessoa (desde 19/11/2026).** Cada um cadastra as suas, o check-in só vale perto das suas e só quem cadastrou exclui (migração `20261119000005_gyms_per_person.sql`). Ainda dá para cadastrar a própria casa como academia; o parceiro vê as academias de todos na lista e pode reportar o treino.
 - **Projeto gratuito do Supabase pausa após cerca de 7 dias sem uso [Provável].** Num app usado todo dia isso não deve acontecer, mas se pausar o fechamento da semana não roda. Abrir o painel e reativar resolve.
 - **O fechamento depende do `pg_cron`.** Se o agendamento falhar, qualquer membro que abrir o app dispara `catch_up_weeks`, que fecha as semanas vencidas. A função é idempotente (rodar duas vezes não duplica nada).
 - **Fuso horário:** o grupo guarda o fuso de quem o criou (`America/Sao_Paulo` por padrão). Viagem para outro fuso não muda a regra do grupo.
