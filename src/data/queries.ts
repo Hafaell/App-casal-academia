@@ -10,6 +10,7 @@ import type {
   GroupRulesUpdate,
   Gym,
   Joker,
+  KittyWithdrawal,
   Member,
   Punishment,
   Reaction,
@@ -34,6 +35,7 @@ export const keys = {
   results: (gid: string) => ['results', gid] as const,
   punishments: (gid: string) => ['punishments', gid] as const,
   gyms: (gid: string) => ['gyms', gid] as const,
+  withdrawals: (gid: string) => ['withdrawals', gid] as const,
 }
 
 // ---------------------------------------------------------------------
@@ -437,4 +439,44 @@ export async function catchUpWeeks(gid: string): Promise<number> {
   const { data, error } = await supabase.rpc('catch_up_weeks', { gid })
   if (error) throw error
   return (data as number) ?? 0
+}
+
+// ---------------------------------------------------------------------
+// Caixinha: retiradas
+// ---------------------------------------------------------------------
+
+export function useKittyWithdrawals(gid: string) {
+  return useQuery({
+    queryKey: keys.withdrawals(gid),
+    queryFn: async () =>
+      must(
+        await supabase
+          .from('kitty_withdrawals')
+          .select('*')
+          .eq('group_id', gid)
+          .order('created_at', { ascending: false }),
+      ) as KittyWithdrawal[],
+  })
+}
+
+export function useAddKittyWithdrawal(gid: string) {
+  const invalidate = useInvalidate()
+  return useMutation({
+    mutationFn: async (input: { amount: number; description: string }) =>
+      must(
+        await supabase
+          .from('kitty_withdrawals')
+          .insert({ group_id: gid, amount: input.amount, description: input.description }),
+      ),
+    onSuccess: () => invalidate('withdrawals'),
+  })
+}
+
+export function useDeleteKittyWithdrawal() {
+  const invalidate = useInvalidate()
+  return useMutation({
+    mutationFn: async (id: string) =>
+      must(await supabase.from('kitty_withdrawals').delete().eq('id', id)),
+    onSuccess: () => invalidate('withdrawals'),
+  })
 }

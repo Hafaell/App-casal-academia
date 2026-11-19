@@ -50,5 +50,5 @@ export default function GymsMap({ gyms, here }: { gyms: MapGym[]; here: LatLng |
     }
   }, [gyms, here])
 
-  return <div ref={box} className="h-64 w-full overflow-hidden rounded-xl border border-line" role="img" aria-label="Mapa das academias cadastradas" />
+  return <div ref={box} className="relative isolate z-0 h-64 w-full overflow-hidden rounded-xl border border-line" role="img" aria-label="Mapa das academias cadastradas" />
 }

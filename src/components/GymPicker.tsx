@@ -150,7 +150,7 @@ export default function GymPicker({ center, gyms, here, busy, onConfirm, onClose
   const away = pin && here ? formatDistance(distanceMeters(here, pin)) : null
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-bg">
+    <div className="fixed inset-0 z-[3000] flex flex-col bg-bg">
       <div className="safe-top flex items-center justify-between gap-2 px-3 pb-2">
         <button className="rounded-full bg-surface px-3 py-1.5 text-sm" onClick={onClose}>
           Fechar
@@ -193,7 +193,7 @@ export default function GymPicker({ center, gyms, here, busy, onConfirm, onClose
         </ul>
       )}
 
-      <div ref={box} className="min-h-0 flex-1" role="application" aria-label="Mapa para marcar a academia" />
+      <div ref={box} className="relative isolate z-0 min-h-0 flex-1" role="application" aria-label="Mapa para marcar a academia" />
 
       <form onSubmit={submit} className="safe-bottom space-y-2 border-t border-line bg-surface p-3">
         {!pin ? (
