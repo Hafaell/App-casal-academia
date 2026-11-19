@@ -4,6 +4,17 @@ PWA para um casal manter a meta de 4 treinos por semana, com check-in por foto, 
 
 **Leia primeiro o [PROGRESSO.md](./PROGRESSO.md).** Ele é a fonte da verdade sobre o estado do projeto, o backlog, as decisões pendentes e os riscos. Ao terminar um trabalho, atualize-o (itens prontos, backlog e a data no topo). O [README.md](./README.md) explica a instalação e as regras de negócio.
 
+## Sobre quem usa este projeto
+
+O dono do projeto **não conhece nada de desenvolvimento de aplicativos para celular** (React Native, Expo, Expo Go, NativeWind, EAS, Xcode, Android Studio, TestFlight, Google Play Console e afins). Sempre que uma tarefa exigir que ele faça algo nessas áreas:
+
+- Explique **passo a passo**, na ordem, com um passo por vez e o resultado esperado de cada um ("você deve ver X na tela").
+- Diga **o que é** cada ferramenta ou termo na primeira vez que aparecer, em uma frase simples, e para que serve no projeto.
+- Diga **onde clicar ou o que digitar**, com o comando exato e em qual programa (terminal, navegador, painel do site).
+- Avise **antes** de qualquer passo que custe dinheiro, peça conta nova ou não possa ser desfeito.
+- Diga o que fazer **se der errado** (a mensagem de erro mais provável e a saída).
+- Não presuma que ele sabe abrir terminal, instalar programas ou ler mensagens de erro. Quando houver dúvida, prefira explicar demais a de menos.
+
 ## Comandos
 
 ```bash
