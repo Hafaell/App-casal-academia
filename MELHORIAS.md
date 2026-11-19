@@ -65,7 +65,7 @@ Legenda de confiança: **[Certa]**, **[Provável]**, **[Adivinhando]**.
 
 ### 7. Mapa na tela Academias
 
-- **Ideia:** mostrar as academias num mapa, com um círculo de 300 m em volta de cada uma.
+- **Ideia:** mostrar as academias num mapa, com um círculo de 100 m em volta de cada uma.
 - **Como:** Leaflet com os tiles do OpenStreetMap, que não exigem chave extra. A atribuição do OpenStreetMap precisa aparecer no mapa. **[Provável]**
 - **Onde:** `src/pages/GymsPage.tsx`.
 - **Decidir:** usar Leaflet ou o próprio Google Maps, que já é usado na busca de academias.

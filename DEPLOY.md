@@ -40,7 +40,7 @@ Tiradas do `CLAUDE.md` e do `PROGRESSO.md` da `develop` (15/11/2026). Confira se
 
 Falta aplicar **só uma** migração, a 4ª:
 
-- `supabase/migrations/20261116000001_gym_location.sql` (academias, posição no check-in e regra de 300 m)
+- `supabase/migrations/20261116000001_gym_location.sql` (academias, posição no check-in e regra de 300 m; o raio virou 100 m na migração `20261119000001_gym_radius_100.sql`)
 
 ### 1.1 Ver se ela já foi aplicada
 
@@ -183,8 +183,8 @@ O script `npm run test:e2e` (que existe na `develop`, não nesta branch) cria ch
 | Publiquei, mas o site não tem o GPS | A pasta local estava numa branch sem o código novo | Conferir que o merge entrou na `develop`, `git checkout develop`, `git pull` e publicar de novo |
 | "Ative a localização para registrar o treino" | Localização negada ou desligada no iPhone | Liberar em Ajustes |
 | "Cadastre a academia do grupo antes de registrar o treino" | Nenhuma academia cadastrada | **Mais > Academias**, ou desligar a regra em Grupo e regras |
-| "Você está a X m da academia mais próxima" | Fora do raio de 300 m, ou o GPS errou dentro do prédio | Chegar mais perto, ir para perto de uma janela e esperar o GPS. Se for constante, avaliar aumentar o raio (`gym_radius_m()` no banco e `GYM_RADIUS_M` em `src/domain/geo.ts`) |
-| A busca "Buscar no Google Maps" não aparece | `VITE_GOOGLE_MAPS_API_KEY` não entrou no build | Cadastrar a variável e publicar de novo |
+| "Você está a X m da academia mais próxima" | Fora do raio de 100 m, ou o GPS errou dentro do prédio | Chegar mais perto, ir para perto de uma janela e esperar o GPS. Se for constante, avaliar aumentar o raio (`gym_radius_m()` no banco e `GYM_RADIUS_M` em `src/domain/geo.ts`) |
+| A busca "Buscar pelo nome aqui no app" não aparece | `VITE_GOOGLE_MAPS_API_KEY` não entrou no build (o cartão "Buscar no Google Maps" por link colado funciona sem a chave) | Cadastrar a variável e publicar de novo |
 | A busca aparece, mas dá erro ao pesquisar | APIs não ativadas, ou o site fora da lista de referenciadores | Passo 2 |
 | O app instalado mostra a versão antiga | Cópia guardada pelo service worker | Fechar o app de verdade e abrir de novo; se persistir, remover e reinstalar o atalho |
 

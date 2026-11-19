@@ -8,7 +8,7 @@ PWA para um casal manter a meta de 4 treinos por semana, com check-in por foto, 
 
 ```bash
 npm run dev          # desenvolvimento (precisa do .env.local)
-npm test             # 23 testes das regras em src/domain
+npm test             # testes das regras em src/domain
 npm run typecheck
 npm run build        # tsc -b && vite build; gera o PWA em dist/
 npm run test:e2e     # ponta a ponta contra o Supabase REAL do .env.local
@@ -44,7 +44,8 @@ Antes de dizer que algo está pronto, rode `npm test`, `npm run typecheck` e `np
 | Hospedagem | Vercel, projeto `treino-a-dois`, time `hafael1` (plano Hobby). Produção: `https://treino-a-dois-theta.vercel.app` |
 | Repositório | `Hafaell/App-casal-academia`, branches `develop` e `main` |
 
-- **Publicar:** `npx vercel deploy --prod` na raiz do projeto. O GitHub ainda **não** está ligado à Vercel, então um push não publica nada sozinho. A CLI já está logada nesta máquina e a pasta `.vercel/` (fora do git) guarda o vínculo com o projeto.
+- **Publicar:** desde 19/11/2026 o GitHub está ligado à Vercel. Push na `main` publica em produção; push na `develop` (ou outra branch) gera um Preview. Fluxo: trabalhar na `develop` e levar para a `main`. A CLI (`npx vercel deploy --prod`) continua funcionando como plano B; a pasta `.vercel/` (fora do git) guarda o vínculo com o projeto.
+- **`api/maps-link.ts`:** função da Vercel que segue os redirecionamentos de links curtos do Google/Apple Maps (lista fechada de domínios) para o cadastro de academia por link colado. Não roda no `vite dev`; teste num Preview com `npx vercel curl`.
 - As variáveis `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY` estão cadastradas na Vercel em Production e Preview, como tipo `config` (são públicas por desenho).
 - `.env.local` (fora do git) guarda `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY`. A chave anon é pública por desenho; a `service_role` nunca entra no projeto nem no front-end.
 - A mesma organização do Supabase tem outro projeto, "Financeiro", que **não é deste app**. Não mexa nele.

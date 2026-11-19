@@ -2,7 +2,7 @@
 
 Este arquivo é o ponto de partida de toda nova sessão. Ele diz onde o projeto está, o que falta e para onde queremos ir.
 
-Última atualização: 16/11/2026 · Branch de trabalho: `develop` · Versão do app: 0.1.0
+Última atualização: 19/11/2026 · Branch de trabalho: `develop` · Versão do app: 0.1.0
 
 Instruções para sessões do Claude Code ficam no [CLAUDE.md](./CLAUDE.md).
 
@@ -41,7 +41,7 @@ App para o casal (Rafael e a namorada) não desanimar da academia.
 | Caixinha: saldo, dívidas, marcar multa paga e punição cumprida | Feito |
 | Roleta: adicionar, editar, pausar e remover punições | Feito |
 | Exceções e coringa do mês | Feito |
-| Verificação de localização: academias do grupo (busca no Google Maps ou posição atual), check-in só a até 300 m, conferido no banco | Feito, **não testado no iPhone nem com chave real do Google** |
+| Verificação de localização: academias do grupo (link colado do Google Maps, posição atual ou busca com chave do Google), check-in só a até 100 m, conferido no banco; botão Excluir | Feito, **não testado no iPhone**. A busca com chave do Google não foi ativada (sem chave) |
 | Grupo e regras: meta, faixa de multa, domingo, coringas por mês, convite, nome | Feito |
 | Banco com regras e segurança (RLS) em todas as tabelas e nas fotos | Feito |
 | Fechamento automático da semana (função no banco + agendamento + rede de segurança no app) | Job agendado e ativo no Supabase real; **o primeiro fechamento real ainda não aconteceu** |
@@ -95,9 +95,10 @@ Feito em 15/11/2026. Endereço de produção: **https://treino-a-dois-theta.verc
 - [x] Conta na Vercel criada com o GitHub (usuário `hafaell`, time `hafael1`).
 - [x] Projeto `treino-a-dois` criado e publicado **pela CLI**, a partir da pasta local (`npx vercel deploy --prod`).
 - [x] Variáveis `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY` cadastradas em Production e Preview.
-- [ ] **Ligar o repositório do GitHub ao projeto** para publicar sozinho a cada push. Hoje não está ligado: falta instalar o aplicativo da Vercel no GitHub (em vercel.com/new > GitHub > Install) e depois rodar `npx vercel git connect`. Enquanto isso, cada atualização precisa de um `npx vercel deploy --prod`.
+- [x] **GitHub ligado ao projeto** em 19/11/2026: push na `main` publica em produção; push em outras branches gera Preview.
 - [ ] Opcional: variável `VITE_GOOGLE_MAPS_API_KEY` (busca de academias pelo nome no Google Maps).
-- [ ] Escolher a branch de produção quando ligar o GitHub. O repositório já tem `main`, hoje igual à `develop`.
+- [x] Branch de produção: `main`. Fluxo: trabalhar na `develop` e levar para a `main` para publicar.
+- [x] **Migração 5 (raio 100 m):** `20261119000001_gym_radius_100.sql` aplicada pelo SQL Editor em 19/11/2026 e conferida (`gym_radius_m()` = 100).
 
 ### C. iPhone (instalar como app)
 
@@ -184,7 +185,7 @@ DATABASE_URL=postgres://postgres@localhost:5432/postgres npm run test:db   # pre
 - [x] Seção 3A: Supabase criado, migrado e validado.
 - [x] Seção 3B: publicado na Vercel.
 - [ ] Seções 3C a 3E: instalação no iPhone, primeiro uso e teste real.
-- [ ] Ligar o GitHub à Vercel para publicação automática (seção 3B).
+- [x] Ligar o GitHub à Vercel para publicação automática (seção 3B).
 - [ ] Testar a câmera no iPhone real, no app instalado e também no Safari. Se `getUserMedia` falhar no modo instalado, o plano B (câmera nativa via `<input capture>`) já existe, mas só confere a idade do arquivo.
 - [ ] Confirmar que o `pg_cron` fecha a semana no domingo às 23h59 de Brasília. O job roda no minuto 59 de cada hora e a função só fecha quando já passou das 23h59 do domingo no fuso do grupo; verificar o primeiro fechamento real.
 - [ ] Ajustar o que aparecer no uso real (texto, tamanhos, fluxo).
@@ -226,10 +227,10 @@ O banco já guarda regras por grupo, então a base existe. Falta:
 | Multa por semana ou por treino faltante | **Por semana**, um valor sorteado | Mudar exige alterar `close_week` |
 | Exceção reduz a meta em 1? Limite por mês? | Reduz 1 por dia útil, **sem limite mensal**; não reduz se a pessoa treinou naquele dia | Pode virar abuso. Vale pôr um limite? |
 | Treino no domingo conta | **Não** (check-in bloqueado); configurável em Grupo e regras | Confirmar |
-| Registrar a localização da academia | **Sim**, até 300 m de uma academia do grupo; desligável por grupo | Ajustar o raio se o GPS indoor atrapalhar (`gym_radius_m()` no banco e `GYM_RADIUS_M` no app) |
+| Registrar a localização da academia | **Sim**, até 100 m de uma academia do grupo (era 300 m até 19/11/2026); desligável por grupo | Ajustar o raio se o GPS indoor atrapalhar (`gym_radius_m()` no banco e `GYM_RADIUS_M` no app) |
 | Recompensa quando os dois batem a meta | **Não** existe | Ex.: 4 semanas seguidas dão um prêmio da caixinha |
 | Nome do app | "Treino a Dois" (provisório) | Definir; trocar em `vite.config.ts`, `index.html` e `public/favicon.svg` |
-| Branch `main` | Existe e está igual à `develop` | Usar `main` como produção na Vercel e levar `develop` por PR? |
+| Branch `main` | **Produção na Vercel** desde 19/11/2026; `develop` é a branch de trabalho | Levar `develop` para `main` por PR ou avanço direto |
 | Confirmação de e-mail no cadastro | **Desligada** (decidido em 15/11/2026, para o uso do casal) | Religar se abrir para amigos |
 
 ---
@@ -237,7 +238,7 @@ O banco já guarda regras por grupo, então a base existe. Falta:
 ## 7. Riscos e limitações conhecidos
 
 - **A foto "tirada na hora" não é garantida de forma absoluta [Certa].** A câmera ao vivo (`getUserMedia`) não deixa escolher da galeria, e a data e hora vêm do servidor. O plano B com câmera nativa só checa que o arquivo foi modificado nos últimos 5 minutos, o que dá para burlar. Para um casal, o parceiro vendo o feed é o fiscal real, como o briefing diz.
-- **GPS dá para falsificar [Certa].** Apps de localização falsa (mais comuns no Android) enganam a verificação. O banco impede só o atalho de mandar check-in sem passar pelo GPS do aparelho. Dentro de prédio o GPS pode errar 50 m ou mais; por isso o raio é 300 m e o banco recusa leituras com margem acima de 500 m.
+- **GPS dá para falsificar [Certa].** Apps de localização falsa (mais comuns no Android) enganam a verificação. O banco impede só o atalho de mandar check-in sem passar pelo GPS do aparelho. Dentro de prédio o GPS pode errar 50 m ou mais. O raio é 100 m (pedido do usuário em 19/11/2026) e o banco recusa leituras com margem acima de 500 m; se check-ins verdadeiros forem recusados, avaliar subir o raio ou cadastrar a academia por "Estou na academia agora", que é o jeito mais preciso.
 - **Qualquer membro cadastra ou remove academias.** Dá para cadastrar a própria casa como academia; o parceiro vê quem cadastrou na lista.
 - **Projeto gratuito do Supabase pausa após cerca de 7 dias sem uso [Provável].** Num app usado todo dia isso não deve acontecer, mas se pausar o fechamento da semana não roda. Abrir o painel e reativar resolve.
 - **O fechamento depende do `pg_cron`.** Se o agendamento falhar, qualquer membro que abrir o app dispara `catch_up_weeks`, que fecha as semanas vencidas. A função é idempotente (rodar duas vezes não duplica nada).

@@ -33,7 +33,7 @@ As regras que valem dinheiro ficam **no banco**, não no aparelho:
 - A semana é fechada pela função `close_week`, que calcula a meta com exceções e coringa, sorteia a multa e a punição e registra a dívida. O sorteio é um só por semana, então se os dois falharem pagam a mesma coisa.
 - Semana fechada não pode ser alterada (apagar check-in, exceção ou coringa).
 - Cada pessoa só envia fotos para a própria pasta, e só membros do grupo veem as fotos.
-- **Localização:** o app manda a posição do GPS junto com a foto e o banco confere se ela está a até **300 m** de uma academia cadastrada pelo grupo. O próprio banco escolhe a academia e calcula a distância. A regra pode ser desligada em Grupo e regras.
+- **Localização:** o app manda a posição do GPS junto com a foto e o banco confere se ela está a até **100 m** de uma academia cadastrada pelo grupo. O próprio banco escolhe a academia e calcula a distância. A regra pode ser desligada em Grupo e regras.
 
 O app repete o cálculo da meta em `src/domain/rules.ts` só para mostrar o placar ao vivo.
 
@@ -62,9 +62,14 @@ npm run dev
 2. Em **Environment Variables**, cadastre `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY`.
 3. Faça o deploy. O `vercel.json` já redireciona as rotas para o app.
 
-### 4. Google Maps (opcional, para buscar a academia pelo nome)
+### 4. Google Maps (opcional, para buscar a academia pelo nome dentro do app)
 
-Sem esta chave o app funciona: a academia é cadastrada pela posição atual, com a pessoa dentro dela.
+Sem esta chave o app funciona de dois jeitos:
+
+- **Buscar no Google Maps:** o app abre o Google Maps, a pessoa toca na academia, em **Compartilhar › Copiar link** e cola o link no app. O link curto é aberto pela função `api/maps-link.ts` (Vercel), que só segue redirecionamentos de endereços de mapas, e o app usa a posição do pino. Links que não trazem a posição (`?q=…&ftid=…`) são recusados com uma explicação.
+- **Estou na academia agora:** usa a posição atual, com a pessoa dentro da academia.
+
+Com a chave abaixo aparece também uma busca pelo nome dentro do próprio app.
 
 1. Em [console.cloud.google.com](https://console.cloud.google.com), crie um projeto e ative o faturamento (o Google exige cartão, mas o uso de um casal fica dentro da cota gratuita mensal).
 2. Em **APIs e serviços > Biblioteca**, ative **Maps JavaScript API** e **Places API (New)**.
@@ -110,7 +115,7 @@ O briefing deixou alguns pontos em aberto. Para não travar a primeira versão, 
 | Multa por semana ou por treino faltante? | Um valor sorteado **por semana** | `close_week` no banco |
 | Exceção reduz a meta em 1? Tem limite? | Reduz 1 por dia útil (seg a sex) justificado, **sem limite mensal**. Exceção em dia que a pessoa treinou não reduz | `close_week` e `rules.ts` |
 | Treino no domingo conta? | **Não** por padrão, e o check-in fica bloqueado | Configurável em Grupo e regras |
-| Registrar localização? | **Sim.** Check-in só vale a até 300 m de uma academia do grupo (regra ligada por padrão). A foto ganha carimbo com dia, hora e nome da academia | `20261116000001_gym_location.sql` e `src/domain/geo.ts` |
+| Registrar localização? | **Sim.** Check-in só vale a até 100 m de uma academia do grupo (regra ligada por padrão). A foto ganha carimbo com dia, hora e nome da academia | `20261116000001_gym_location.sql`, `20261119000001_gym_radius_100.sql` e `src/domain/geo.ts` |
 | Recompensa por sequência? | Não. A tela de Sequência mostra semanas seguidas de cada um e do casal | |
 | Para que serve a caixinha? | Só controle: quanto entrou e quanto cada um deve | |
 | Nome do app | "Treino a Dois" (provisório) | `vite.config.ts` e `index.html` |
