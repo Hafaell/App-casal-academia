@@ -219,6 +219,7 @@ O banco já guarda regras por grupo, então a base existe. Falta:
 - [ ] Telas de grupo com mais de 2 pessoas revisadas (placar, caixinha e feed foram pensados para 2).
 - [ ] Decidir: uma multa sorteada por semana para todos que falharam (como hoje) ou por pessoa, quando o grupo for grande.
 - [ ] Lojas (App Store e Google Play): plano completo, custos e a ordem econômica de gastos em [app-comerciavel.md](./app-comerciavel.md). Decisão de 19/11/2026: app nativo em React Native com Expo.
+- [ ] Funções para o casal (treino juntos, caixinha com objetivo, roleta de prêmios, relatório mensal e outras), com decisão de o que entra agora ou depois, em [melhorias-casal.md](./melhorias-casal.md).
 
 ---
 
