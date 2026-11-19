@@ -84,7 +84,7 @@ Feito em 15/11/2026. Projeto `treino-a-dois` (ref `hyxvesqvvhueaigclpbl`, São P
 - [x] **Confirm email desligado.** O cadastro já entra direto. Para religar: Authentication > Sign In / Providers.
 - [x] *Site URL* em **Authentication > URL Configuration** aponta para `https://treino-a-dois-theta.vercel.app`.
 - [x] Job `fechar-semanas` conferido: existe e está ativo.
-- [ ] **Migração 4 (GPS):** `20261116000001_gym_location.sql` ainda precisa ser aplicada pelo SQL Editor (ver [DEPLOY.md](./DEPLOY.md)).
+- [x] **Migração 4 (GPS):** `20261116000001_gym_location.sql` aplicada pelo SQL Editor em 18/11/2026 e conferida. Site republicado com o GPS pela CLI no mesmo dia.
 
 A senha do banco foi gerada pelo painel e não foi guardada. Se precisar (CLI ou `psql`), redefina em Project Settings > Database.
 
