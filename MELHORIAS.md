@@ -18,7 +18,7 @@ Legenda de confiança: **[Certa]**, **[Provável]**, **[Adivinhando]**.
 | 4 | Separar `CheckinPage` em hooks | **Feito em parte.** A decisão do estado (perto, longe, sem academia, erro...) virou função pura em `src/domain/checkinGate.ts`, com testes. A câmera continua na tela: extrair `useCamera` fica para quando mexerem nela de novo |
 | 5 | Testes de interface | **Parcial.** Os 5 casos (perto, longe, sem academia, já treinou, GPS negado) estão testados na lógica (`checkinGate.test.ts`). Playwright ainda não, pois precisa de um Supabase de teste |
 | 6 | Foto sem internet | **Adiado de propósito.** O servidor decide o dia pela hora do envio; reenviar no dia seguinte contaria no dia errado e mexe em multa. A foto já fica na tela se o envio falhar |
-| 7 | Mapa na tela Academias | **Feito** com Leaflet e OpenStreetMap (círculo de 100 m, sua posição, atribuição) |
+| 7 | Mapa na tela Academias | **Feito** com Leaflet e OpenStreetMap (círculo de 100 m, sua posição, atribuição). Também há **Escolher no mapa**: mapa em tela cheia dentro do app para tocar no lugar ou arrastar o pino, buscar pelo nome (Nominatim) e ver o satélite (Esri) |
 | 8 | Botão de foto colorido | **Feito** (verde perto, cinza bloqueado) |
 | 9 | Cor por pessoa | **Feito** no Histórico (barra colorida no dia e borda na foto) e no Feed. Quem saiu do grupo aparece em cinza |
 | 10 | Revisar a tela Início | **Não feito.** Precisa ver a tela num iPhone |

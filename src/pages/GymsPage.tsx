@@ -12,6 +12,7 @@ import { errorMessage } from '@/lib/supabase'
 
 // O mapa (Leaflet) só é baixado quando existe academia para mostrar.
 const GymsMap = lazy(() => import('@/components/GymsMap'))
+const GymPicker = lazy(() => import('@/components/GymPicker'))
 
 const mapsLink = (g: { lat: number; lng: number; place_id?: string | null }) =>
   g.place_id
@@ -35,6 +36,7 @@ export function GymsPage() {
   const [shared, setShared] = useState('')
   const [reading, setReading] = useState(false)
   const [picked, setPicked] = useState<SharedPlace | null>(null)
+  const [mapOpen, setMapOpen] = useState(false)
 
   const fail = (err: unknown) => toast(errorMessage(err), 'error')
 
@@ -108,6 +110,17 @@ export function GymsPage() {
         onError: fail,
       },
     )
+  }
+
+  // Abre o mapa já na sua posição (espera o GPS por até 4 s; sem GPS, abre mesmo assim).
+  async function openMap() {
+    if (!here) {
+      setLocating(true)
+      const p = await Promise.race([getPosition().catch(() => null), new Promise<null>((r) => setTimeout(() => r(null), 4000))])
+      setLocating(false)
+      if (p) setHere(p)
+    }
+    setMapOpen(true)
   }
 
   function openGoogleMaps() {
@@ -204,6 +217,17 @@ export function GymsPage() {
               Ver a que distância estou
             </Button>
           )}
+        </Card>
+
+        <Card>
+          <h2 className="font-semibold">Escolher no mapa</h2>
+          <p className="mt-1 mb-3 text-xs text-muted">
+            Abre um mapa aqui dentro do app: toque no lugar da academia (ou arraste o pino) e cadastre. Dá para buscar pelo nome e ver o
+            satélite.
+          </p>
+          <Button className="w-full" onClick={openMap} loading={locating}>
+            🗺️ Abrir o mapa
+          </Button>
         </Card>
 
         <Card>
@@ -333,6 +357,30 @@ export function GymsPage() {
           </form>
         </Card>
       </div>
+
+      {mapOpen && (
+        <Suspense fallback={<div className="fixed inset-0 z-50 flex items-center justify-center bg-bg"><Spinner /></div>}>
+          <GymPicker
+            center={here ?? gyms.data?.[0] ?? null}
+            gyms={gyms.data ?? []}
+            here={here}
+            busy={add.isPending}
+            onClose={() => setMapOpen(false)}
+            onConfirm={(g) =>
+              add.mutate(
+                { name: g.name, address: g.address || undefined, lat: g.lat, lng: g.lng },
+                {
+                  onSuccess: () => {
+                    toast('Academia cadastrada')
+                    setMapOpen(false)
+                  },
+                  onError: fail,
+                },
+              )
+            }
+          />
+        </Suspense>
+      )}
     </div>
   )
 }
