@@ -6,6 +6,7 @@ import { useCheckins, useCreateCheckin, useGyms } from '@/data/queries'
 import type { Gym } from '@/data/types'
 import { dayMonth, localTime, weekdayShort } from '@/domain/dates'
 import { canShoot, gateFor, type Gate } from '@/domain/checkinGate'
+import { CHECKIN_KINDS, type CheckinKind } from '@/domain/reactions'
 import { GYM_RADIUS_M, formatDistance } from '@/domain/geo'
 import { loadImage, prepareCheckinPhoto } from '@/lib/image'
 import { locationErrorMessage, watchPosition, type Position } from '@/lib/location'
@@ -32,6 +33,7 @@ export function CheckinPage() {
   const [busy, setBusy] = useState(false)
   const [position, setPosition] = useState<Position | null>(null)
   const [gpsError, setGpsError] = useState('')
+  const [kind, setKind] = useState<CheckinKind | null>(null)
 
   const required = group.require_location
 
@@ -160,7 +162,7 @@ export function CheckinPage() {
     const pos = photo.position ?? position
     if (required && !pos) return toast('Ainda sem localização. Espere o GPS e tente de novo.', 'error')
     const sent = pos ? { lat: pos.lat, lng: pos.lng, accuracy: pos.accuracy } : null
-    create.mutate({ photo: photo.blob, position: sent }, {
+    create.mutate({ photo: photo.blob, position: sent, kind }, {
       onSuccess: () => {
         toast('Treino registrado! 💪')
         navigate('/', { replace: true })
@@ -212,13 +214,29 @@ export function CheckinPage() {
 
       <div className="safe-bottom px-6 pt-4">
         {photo ? (
-          <div className="flex gap-3 pb-2">
+          <div className="space-y-3 pb-2">
+            <div className="flex flex-wrap items-center justify-center gap-2" role="group" aria-label="Tipo de treino (opcional)">
+              {(Object.keys(CHECKIN_KINDS) as CheckinKind[]).map((k) => (
+                <button
+                  key={k}
+                  aria-pressed={kind === k}
+                  onClick={() => setKind(kind === k ? null : k)}
+                  className={`min-h-9 rounded-full border px-3 text-sm ${
+                    kind === k ? 'border-accent bg-accent/20 text-white' : 'border-white/20 bg-white/10 text-white/80'
+                  }`}
+                >
+                  {CHECKIN_KINDS[k]}
+                </button>
+              ))}
+            </div>
+            <div className="flex gap-3">
             <Button variant="secondary" className="flex-1 !border-white/20 !bg-white/10 !text-white" onClick={() => setPhoto(null)} disabled={create.isPending}>
               Tirar outra
             </Button>
             <Button className="flex-1" onClick={send} loading={create.isPending}>
               Registrar treino
             </Button>
+            </div>
           </div>
         ) : !cameraError ? (
           <div className="flex items-center justify-between pb-2">

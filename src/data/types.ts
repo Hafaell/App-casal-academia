@@ -1,3 +1,4 @@
+import type { CheckinKind } from '@/domain/reactions'
 import type { ExceptionReason } from '@/domain/rules'
 
 export interface Profile {
@@ -46,6 +47,16 @@ export interface Checkin {
   gym_id: string | null
   gym_name: string | null
   distance_m: number | null
+  kind: CheckinKind | null
+}
+
+export interface Reaction {
+  id: string
+  checkin_id: string
+  group_id: string
+  user_id: string
+  emoji: string
+  created_at: string
 }
 
 export interface Gym {

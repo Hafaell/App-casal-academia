@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { PHOTO_BUCKET, supabase } from '@/lib/supabase'
+import { nextReactionAction, type CheckinKind, type ReactionEmoji, type ReactionLike } from '@/domain/reactions'
 import type { ExceptionReason } from '@/domain/rules'
 import type {
   Checkin,
@@ -10,6 +11,7 @@ import type {
   Joker,
   Member,
   Punishment,
+  Reaction,
   Week,
   WeekResult,
 } from './types'
@@ -167,6 +169,16 @@ export function useGyms(gid: string) {
   })
 }
 
+/** Reações das fotos já carregadas (busca por lista de check-ins, não por embed). */
+export function useReactions(gid: string, checkinIds: string[]) {
+  const ids = [...new Set(checkinIds)].sort()
+  return useQuery({
+    queryKey: ['reactions', gid, ids],
+    enabled: ids.length > 0,
+    queryFn: async () => must(await supabase.from('reactions').select('*').in('checkin_id', ids)) as Reaction[],
+  })
+}
+
 /** URLs assinadas (válidas por 1 hora) para as fotos privadas. */
 export function usePhotoUrls(paths: string[]) {
   const sorted = [...new Set(paths)].sort()
@@ -197,18 +209,21 @@ export interface CheckinInput {
   photo: Blob
   /** Posição no momento da foto. O banco escolhe a academia e confere o raio (gym_radius_m). */
   position: { lat: number; lng: number; accuracy: number } | null
+  /** Tipo de treino, opcional. */
+  kind?: CheckinKind | null
 }
 
 export function useCreateCheckin(gid: string, userId: string) {
   const invalidate = useInvalidate()
   return useMutation({
-    mutationFn: async ({ photo, position }: CheckinInput) => {
+    mutationFn: async ({ photo, position, kind }: CheckinInput) => {
       const path = `${gid}/${userId}/${crypto.randomUUID()}.jpg`
       must(await supabase.storage.from(PHOTO_BUCKET).upload(path, photo, { contentType: 'image/jpeg' }))
       const res = await supabase.from('checkins').insert({
         group_id: gid,
         photo_path: path,
         ...(position ? { lat: position.lat, lng: position.lng, accuracy_m: position.accuracy } : {}),
+        ...(kind ? { kind } : {}),
       })
       if (res.error) {
         // Não deixa foto órfã no armazenamento se o check-in foi recusado.
@@ -217,6 +232,20 @@ export function useCreateCheckin(gid: string, userId: string) {
       }
     },
     onSuccess: () => invalidate('checkins'),
+  })
+}
+
+/** Toque num emoji: cria, troca ou tira a reação da pessoa naquele check-in. */
+export function useReact(userId: string) {
+  const invalidate = useInvalidate()
+  return useMutation({
+    mutationFn: async ({ checkinId, emoji, mine }: { checkinId: string; emoji: ReactionEmoji; mine: ReactionLike | null }) => {
+      const action = nextReactionAction(mine, emoji)
+      if (action.type === 'add') must(await supabase.from('reactions').insert({ checkin_id: checkinId, user_id: userId, emoji: action.emoji }))
+      else if (action.type === 'change') must(await supabase.from('reactions').update({ emoji: action.emoji }).eq('id', action.id))
+      else must(await supabase.from('reactions').delete().eq('id', action.id))
+    },
+    onSuccess: () => invalidate('reactions'),
   })
 }
 

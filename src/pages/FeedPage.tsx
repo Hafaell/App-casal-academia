@@ -2,10 +2,12 @@ import { useMemo, useState } from 'react'
 import { useGroup } from '@/app/GroupProvider'
 import { Avatar, Button, Card, EmptyState, PageHeader, PhotoViewer, Spinner, memberColor, useToast } from '@/components/ui'
 import { formatDistance } from '@/domain/geo'
-import { useCheckins, useDeleteCheckin, useExceptions, useJokers, usePhotoUrls, useWeekResults, useWeeks } from '@/data/queries'
-import type { Checkin, ExceptionDay, Joker, Week, WeekResult } from '@/data/types'
+import { useCheckins, useDeleteCheckin, useExceptions, useJokers, usePhotoUrls, useReact, useReactions, useWeekResults, useWeeks } from '@/data/queries'
+import type { Checkin, ExceptionDay, Joker, Reaction, Week, WeekResult } from '@/data/types'
 import { addDays, dayMonth, localDate, localTime, weekRange, weekdayShort } from '@/domain/dates'
+import { CHECKIN_KINDS, REACTION_EMOJIS, summarizeReactions, type ReactionEmoji } from '@/domain/reactions'
 import { EXCEPTION_REASONS, formatMoney } from '@/domain/rules'
+import { buildSummaryCard, shareImage } from '@/lib/summaryCard'
 import { errorMessage } from '@/lib/supabase'
 
 type FeedItem =
@@ -27,6 +29,7 @@ export function FeedPage() {
   const weeks = useWeeks(group.id)
   const results = useWeekResults(group.id)
   const photos = usePhotoUrls((checkins.data ?? []).map((c) => c.photo_path))
+  const reactions = useReactions(group.id, (checkins.data ?? []).map((c) => c.id))
   const [viewing, setViewing] = useState<Checkin | null>(null)
 
   const items = useMemo<FeedItem[]>(() => {
@@ -58,6 +61,7 @@ export function FeedPage() {
                     key={`c-${item.data.id}`}
                     checkin={item.data}
                     url={photos.data?.get(item.data.photo_path)}
+                    reactions={(reactions.data ?? []).filter((r) => r.checkin_id === item.data.id)}
                     onOpen={() => setViewing(item.data)}
                   />
                 )
@@ -71,6 +75,8 @@ export function FeedPage() {
                     key={`w-${item.data.id}`}
                     week={item.data}
                     results={(results.data ?? []).filter((r) => r.week_id === item.data.id)}
+                    checkins={checkins.data ?? []}
+                    photoUrls={photos.data}
                   />
                 )
             }
@@ -96,7 +102,7 @@ function useMemberLook(userId: string) {
   return { name: nameOf(userId), color: memberColor(idx) }
 }
 
-function CheckinCard({ checkin, url, onOpen }: { checkin: Checkin; url?: string; onOpen: () => void }) {
+function CheckinCard({ checkin, url, reactions, onOpen }: { checkin: Checkin; url?: string; reactions: Reaction[]; onOpen: () => void }) {
   const { group, userId, today } = useGroup()
   const { name, color } = useMemberLook(checkin.user_id)
   const del = useDeleteCheckin()
@@ -118,6 +124,7 @@ function CheckinCard({ checkin, url, onOpen }: { checkin: Checkin; url?: string;
               {checkin.distance_m !== null && ` · ${formatDistance(checkin.distance_m)}`}
             </p>
           )}
+          {checkin.kind && <p className="text-xs text-muted">🏷️ {CHECKIN_KINDS[checkin.kind]}</p>}
         </div>
         {canDelete && (
           <button
@@ -134,7 +141,38 @@ function CheckinCard({ checkin, url, onOpen }: { checkin: Checkin; url?: string;
       <button className="block aspect-[4/5] w-full bg-surface-2" onClick={onOpen} aria-label={`Ver foto de ${name}`}>
         {url ? <img src={url} alt={`Check-in de ${name}`} loading="lazy" className="h-full w-full object-cover" /> : null}
       </button>
+      <ReactionBar checkinId={checkin.id} reactions={reactions} />
     </Card>
+  )
+}
+
+/** Um emoji por pessoa: tocar de novo no mesmo tira, tocar em outro troca. */
+function ReactionBar({ checkinId, reactions }: { checkinId: string; reactions: Reaction[] }) {
+  const { userId } = useGroup()
+  const react = useReact(userId)
+  const toast = useToast()
+  const { counts, mine } = summarizeReactions(reactions, userId)
+  return (
+    <div className="flex gap-2 p-2">
+      {REACTION_EMOJIS.map((emoji: ReactionEmoji) => {
+        const n = counts.get(emoji) ?? 0
+        const active = mine?.emoji === emoji
+        return (
+          <button
+            key={emoji}
+            aria-pressed={active}
+            disabled={react.isPending}
+            onClick={() => react.mutate({ checkinId, emoji, mine }, { onError: (err) => toast(errorMessage(err), 'error') })}
+            className={`flex min-h-9 items-center gap-1 rounded-full border px-3 text-sm transition active:scale-95 ${
+              active ? 'border-accent bg-accent/15' : 'border-line bg-surface-2'
+            }`}
+          >
+            <span>{emoji}</span>
+            {n > 0 && <span className="text-xs tabular-nums text-muted">{n}</span>}
+          </button>
+        )
+      })}
+    </div>
   )
 }
 
@@ -170,9 +208,48 @@ function JokerCard({ joker }: { joker: Joker }) {
   )
 }
 
-function WeekCard({ week, results }: { week: Week; results: WeekResult[] }) {
-  const { nameOf } = useGroup()
+function WeekCard({
+  week,
+  results,
+  checkins,
+  photoUrls,
+}: {
+  week: Week
+  results: WeekResult[]
+  checkins: Checkin[]
+  photoUrls?: Map<string, string>
+}) {
+  const { nameOf, members } = useGroup()
+  const toast = useToast()
+  const [sharing, setSharing] = useState(false)
   const owing = results.filter((r) => r.owes)
+
+  async function share() {
+    setSharing(true)
+    try {
+      const end = addDays(week.week_start, 6)
+      const photos = checkins
+        .filter((c) => c.day >= week.week_start && c.day <= end)
+        .map((c) => photoUrls?.get(c.photo_path))
+        .filter((u): u is string => Boolean(u))
+      const blob = await buildSummaryCard({
+        title: 'Treino a Dois',
+        subtitle: `Semana ${weekRange(week.week_start)}`,
+        photos,
+        lines: results.map((r) => ({
+          name: nameOf(r.user_id),
+          color: memberColor(members.findIndex((m) => m.user_id === r.user_id)),
+          text: `${r.checkins}/${r.goal}${r.met ? ' ✓' : r.used_joker ? ' 🃏' : ''}`,
+        })),
+        footer: owing.length === 0 ? 'Ninguém foi punido 💪' : `Caixinha: ${formatMoney(week.fine_amount ?? 0)}`,
+      })
+      await shareImage(blob, `semana-${week.week_start}.jpg`)
+    } catch (err) {
+      toast(errorMessage(err), 'error')
+    } finally {
+      setSharing(false)
+    }
+  }
   return (
     <Card className={owing.length ? 'border-danger/30' : 'border-ok/30'}>
       <p className="text-xs text-muted">Semana {weekRange(week.week_start)} fechada</p>
@@ -187,6 +264,9 @@ function WeekCard({ week, results }: { week: Week; results: WeekResult[] }) {
       <p className="mt-1 text-xs text-muted">
         {results.map((r) => `${nameOf(r.user_id)} ${r.checkins}/${r.goal}${r.used_joker ? ' 🃏' : ''}`).join(' · ')}
       </p>
+      <Button variant="ghost" className="mt-2 w-full !text-accent" onClick={share} loading={sharing}>
+        📤 Compartilhar cartão da semana
+      </Button>
     </Card>
   )
 }
