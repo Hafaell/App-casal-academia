@@ -1,0 +1,48 @@
+{
+  "name": "treino-a-dois-mobile",
+  "version": "0.1.0",
+  "main": "expo-router/entry",
+  "dependencies": {
+    "@react-native-async-storage/async-storage": "2.2.0",
+    "@shopify/react-native-skia": "2.14.0",
+    "@supabase/supabase-js": "^2.119.2",
+    "@tanstack/react-query": "^5.108.1",
+    "aes-js": "^3.1.2",
+    "expo": "~58.0.26",
+    "expo-camera": "~58.0.14",
+    "expo-clipboard": "~58.0.4",
+    "expo-constants": "~58.0.16",
+    "expo-crypto": "~58.0.8",
+    "expo-file-system": "~58.0.14",
+    "expo-linking": "~58.0.17",
+    "expo-location": "~58.0.22",
+    "expo-router": "~58.0.32",
+    "expo-secure-store": "~58.0.3",
+    "expo-sharing": "~58.0.23",
+    "expo-splash-screen": "~58.0.14",
+    "expo-status-bar": "~58.0.5",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "react-native": "0.88.1",
+    "react-native-get-random-values": "^2.1.0",
+    "react-native-maps": "1.29.11",
+    "react-native-safe-area-context": "~5.11.1",
+    "react-native-screens": "~4.30.1",
+    "react-native-svg": "15.16.0"
+  },
+  "devDependencies": {
+    "@types/aes-js": "^3.1.4",
+    "@types/react": "~19.3.0",
+    "typescript": "~6.0.3"
+  },
+  "scripts": {
+    "start": "expo start",
+    "android": "expo start --android",
+    "ios": "expo start --ios",
+    "typecheck": "tsc --noEmit",
+    "test": "jest",
+    "doctor": "expo-doctor",
+    "export": "expo export --platform ios --platform android"
+  },
+  "private": true
+}

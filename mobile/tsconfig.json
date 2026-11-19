@@ -1,0 +1,15 @@
+{
+  "extends": "expo/tsconfig.base",
+  "compilerOptions": {
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "paths": {
+      "@/*": ["./src/*"],
+      "@domain/*": ["../src/domain/*"]
+    }
+  },
+  "include": ["src", "../src/domain", "expo-env.d.ts", "jest.setup.ts"],
+  "exclude": ["../src/domain/**/*.test.ts", "node_modules"]
+}

@@ -28,12 +28,16 @@ export function localToday(timeZone: string, now: Date = new Date()): ISODate {
 /** Converte um instante (ex.: created_at) na data local do fuso. */
 export function localDate(instant: Date | string, timeZone: string): ISODate {
   const d = typeof instant === 'string' ? new Date(instant) : instant
-  return new Intl.DateTimeFormat('en-CA', {
+  // Monta pelas partes (ano, mês, dia) em vez de confiar na ordem do 'en-CA':
+  // o motor do app nativo (Hermes) não garante o mesmo formato do navegador.
+  const parts = new Intl.DateTimeFormat('en-US', {
     timeZone,
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
-  }).format(d)
+  }).formatToParts(d)
+  const get = (type: string) => parts.find((p) => p.type === type)?.value ?? ''
+  return `${get('year')}-${get('month').padStart(2, '0')}-${get('day').padStart(2, '0')}`
 }
 
 export function localTime(instant: Date | string, timeZone: string): string {
