@@ -122,15 +122,6 @@ export interface Week {
   punishment_text: string | null
 }
 
-export interface KittyWithdrawal {
-  id: string
-  group_id: string
-  amount: number
-  description: string
-  withdrawn_by: string | null
-  created_at: string
-}
-
 export interface WeekResult {
   week_id: string
   group_id: string
