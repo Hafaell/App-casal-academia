@@ -16,8 +16,8 @@ Informações tiradas do `CLAUDE.md` e do `PROGRESSO.md` da branch `develop` (15
 | Login | "Confirm email" **desligado**. O *Site URL* já aponta para a Vercel. |
 | Vercel | Projeto `treino-a-dois`, time `hafael1`, endereço `https://treino-a-dois-theta.vercel.app`. |
 | Variáveis na Vercel | `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY` já cadastradas em Production e Preview. |
-| Como publica | Pela CLI (`npx vercel deploy --prod`). **O GitHub não estava ligado à Vercel**, então push e merge **não publicam sozinhos**. |
-| Onde está o código com GPS | Nas branches `claude/gracious-pascal-sle0t1` e `Vercel`. As branches `main` e `develop` **ainda não têm** o código novo. |
+| Como publica | Pela CLI (`npx vercel deploy --prod`), com a pasta local na branch `develop`. **O GitHub não estava ligado à Vercel** em 15/11, então push e merge **não publicavam sozinhos**. Se você ligou depois e a Vercel acompanha a `develop`, o merge nela publica: confirme em **Settings > Git > Production Branch**. |
+| Onde está o código com GPS | Nas branches `claude/gracious-pascal-sle0t1` e `Vercel`. A `develop` (a branch de onde o site foi publicado) e a `main` **ainda não têm** o código novo. |
 
 O que falta fazer:
 
@@ -34,10 +34,12 @@ O que falta fazer:
 
 ## 0. Conferir se o código novo já foi ao ar sem a migração
 
-A branch `Vercel` já contém o código com GPS. Se ela estiver ligada à Vercel por alguma configuração que eu não consigo ver daqui, o site pode já estar rodando a versão nova **sem** a migração, e a tela de check-in e a tela Academias dariam erro. **[Adivinhando]** (o `CLAUDE.md` diz que o GitHub não estava ligado, mas isso é de 15/11.)
+O site no ar foi publicado a partir da `develop`, que **não** tem o código com GPS. Então, o mais provável é que o site esteja funcionando normalmente, na versão antiga, e nada esteja quebrado. **[Provável]**
 
-- [ ] Na Vercel, em **Deployments**, ver o último deploy de **Production**: qual branch e qual commit. Se o commit for `94e386c` ou mais novo, o código novo está no ar.
-- [ ] Se estiver no ar, faça o passo 1 **agora**. Nada se perde nesse intervalo, só o check-in e as Academias dão erro.
+O risco existe só se a Vercel estiver acompanhando a branch `Vercel` (que já tem o código com GPS) ou a `claude/gracious-pascal-sle0t1`. Eu não consigo ver essa configuração daqui.
+
+- [ ] Na Vercel, em **Deployments**, ver o último deploy de **Production**: qual branch e qual commit. Se for `develop` (ou um deploy da CLI) e não tiver o commit `94e386c` ou mais novo, o código novo **não** está no ar e você pode seguir com calma.
+- [ ] Se o código novo estiver no ar, faça o passo 1 **agora**. Nada se perde nesse intervalo, só o check-in e as Academias dão erro.
 
 ---
 
@@ -125,10 +127,10 @@ Variáveis `VITE_` entram **no momento do build**. Cadastrar a variável não mu
 
 ### Opção A: pela CLI, como já é feito hoje
 
-Na pasta do projeto, com o código com GPS na pasta (branch `claude/gracious-pascal-sle0t1` ou `Vercel`):
+Primeiro leve o código com GPS para a `develop` (a branch de onde o site é publicado), de preferência por um **Pull Request** de `claude/gracious-pascal-sle0t1` para `develop`, para poder revisar. Depois, na pasta do projeto:
 
 ```bash
-git checkout Vercel          # ou claude/gracious-pascal-sle0t1
+git checkout develop
 git pull
 npm install
 npm test && npm run typecheck && npm run build
@@ -138,7 +140,7 @@ npx vercel deploy --prod
 - [ ] Esperar o comando terminar e abrir `https://treino-a-dois-theta.vercel.app`.
 - [ ] Se aparecer "Falta configurar o Supabase", confira em **Settings > Environment Variables** se as variáveis estão em **Production**.
 
-A CLI publica **o que está na pasta**, não o que está no GitHub. Se a pasta estiver em `main` ou `develop`, o código com GPS **não** vai ao ar. **[Certa]**
+A CLI publica **o que está na pasta**, não o que está no GitHub. Se a pasta estiver numa branch sem o código com GPS (por exemplo, a `develop` antes do merge, ou a `main`), o GPS **não** vai ao ar. **[Certa]**
 
 ### Opção B: publicar sozinho a cada push (recomendado a médio prazo)
 
@@ -146,10 +148,10 @@ Hoje cada atualização depende de rodar a CLI. Para a Vercel publicar sozinha:
 
 - [ ] Em vercel.com/new > **GitHub** > instalar o aplicativo da Vercel no repositório `Hafaell/App-casal-academia`.
 - [ ] Rodar `npx vercel git connect` na pasta do projeto.
-- [ ] Em **Settings > Git > Production Branch**, escolher a branch de produção. A `main` existe, mas ainda **não tem** o código com GPS; é preciso levá-lo para ela antes (Pull Request).
+- [ ] Em **Settings > Git > Production Branch**, escolher a branch de produção. Como a `develop` é a branch que você já usa para publicar, o caminho mais simples é mantê-la. A `main` existe, mas também **não tem** o código com GPS.
 - [ ] Depois de ligado, cada push na branch de produção publica sozinho. Outras branches geram só um endereço de Preview.
 
-Ao levar o código novo para `develop` ou `main`, o `PROGRESSO.md` provavelmente dará **conflito**: esta branch partiu da `develop` antes dos commits de 15/11 (que atualizaram esse mesmo arquivo). Resolva mantendo os dois lados.
+Ao levar o código novo para a `develop`, o `PROGRESSO.md` provavelmente dará **conflito**: esta branch partiu da `develop` antes dos commits de 15/11 (que atualizaram esse mesmo arquivo). Resolva mantendo os dois lados.
 
 ### Depois de publicar
 
@@ -186,7 +188,7 @@ O script `npm run test:e2e` (que existe na `develop`, não nesta branch) cria ch
 | Erro mencionando `gyms` ("relation does not exist") ou coluna `lat` | A migração 4 não foi rodada | Passo 1 |
 | "Falta configurar o Supabase" ao abrir o site | Variáveis `VITE_SUPABASE_*` fora de Production, ou deploy feito sem elas | Conferir em Settings > Environment Variables e publicar de novo |
 | Subi o código, mas o site não mudou | O GitHub não está ligado à Vercel, então o push não publica | Passo 4, opção A, ou ligar o GitHub (opção B) |
-| Publiquei, mas o site não tem o GPS | A pasta local estava em `main` ou `develop`, que não têm o código novo | `git checkout Vercel` e publicar de novo |
+| Publiquei, mas o site não tem o GPS | A pasta local estava numa branch sem o código novo | Fazer o merge de `claude/gracious-pascal-sle0t1` na `develop`, `git checkout develop` e publicar de novo |
 | "Ative a localização para registrar o treino" | Localização negada ou desligada no iPhone | Liberar em Ajustes |
 | "Cadastre a academia do grupo antes de registrar o treino" | Nenhuma academia cadastrada | **Mais > Academias**, ou desligar a regra em Grupo e regras |
 | "Você está a X m da academia mais próxima" | Fora do raio de 300 m, ou o GPS errou dentro do prédio | Chegar mais perto, ir para perto de uma janela e esperar o GPS. Se for constante, avaliar aumentar o raio (`gym_radius_m()` no banco e `GYM_RADIUS_M` em `src/domain/geo.ts`) |
