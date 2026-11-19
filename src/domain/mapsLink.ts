@@ -139,8 +139,9 @@ export interface ResolvedPlace {
  * O `q=` do app do Google Maps é "Nome - Endereço". Com o endereço em mãos, o nome é o que sobra
  * antes dele; sem o endereço, não dá para separar com segurança.
  */
-export function nameFromQuery(q: string, address?: string): string {
+export function nameFromQuery(q: string, rawAddress?: string): string {
   const text = decode(q)
+  const address = rawAddress?.replace(/,\s*(Brasil|Brazil)$/i, '')
   if (address && text.toLowerCase().endsWith(address.toLowerCase())) {
     const name = text.slice(0, text.length - address.length).replace(/[\s,-]+$/, '').trim()
     if (name) return name
@@ -169,7 +170,7 @@ export function placeFromShare(text: string, resolvedUrl: string, resolved?: Res
   }
   return {
     name: (fromText.name || (q && nameFromQuery(q, resolved.address)) || fromUrl.name || '').slice(0, 80),
-    address: (fromText.address || resolved.address || '').slice(0, 200),
+    address: (fromText.address || resolved.address?.replace(/,\s*(Brasil|Brazil)$/i, '') || '').slice(0, 200),
     lat: resolved.lat,
     lng: resolved.lng,
   }

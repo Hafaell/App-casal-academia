@@ -30,7 +30,7 @@ export function parseEmbed(html: string, ftid: string): EmbedPlace | null {
     // Endereço em partes, logo depois do nome: ["R. X, 1 - Bairro","Cidade - UF","CEP"]
     const after = html.slice((m.index ?? 0) + m[0].length, (m.index ?? 0) + m[0].length + 1500)
     const parts = after.match(/\["([^"\]]{3,120})","([^"\]]{3,80})"(?:,"([^"\]]{3,20})")?\]/)
-    const address = parts ? [parts[1], parts[2], parts[3]].filter(Boolean).join(', ') : ''
+    const address = parts ? [parts[1], parts[2], parts[3]].filter(Boolean).join(', ').replace(/,\s*(Brasil|Brazil)$/i, '') : ''
     return { lat, lng, address }
   }
   return null

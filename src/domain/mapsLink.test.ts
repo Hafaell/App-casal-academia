@@ -84,6 +84,16 @@ describe('link do app do Google Maps (sem pino)', () => {
     ).toEqual({ name: 'Academia Smart Fit - Guarapari', address, lat: -20.6499555, lng: -40.4888632 })
   })
 
+  it('ignora ", Brasil" no fim do endereço', () => {
+    const p = placeFromShare('x', APP_URL, {
+      lat: -20.6499555,
+      lng: -40.4888632,
+      address: 'R. Bariloche, 1 - Praia do Morro, Guarapari - ES, 29216-660, Brasil',
+    })
+    expect(p?.name).toBe('Academia Smart Fit - Guarapari')
+    expect(p?.address).toBe('R. Bariloche, 1 - Praia do Morro, Guarapari - ES, 29216-660')
+  })
+
   it('recusa posição inválida do servidor', () => {
     expect(placeFromShare('x', APP_URL, { lat: 0, lng: 0 })).toBeNull()
     expect(placeFromShare('x', APP_URL, { lat: 99, lng: 10 })).toBeNull()
