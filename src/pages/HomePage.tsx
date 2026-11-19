@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { useGroup } from '@/app/GroupProvider'
 import { Avatar, Button, Card, Spinner, cx, memberColor } from '@/components/ui'
-import { useWeekResults, useWeeks } from '@/data/queries'
+import { useGyms, useWeekResults, useWeeks } from '@/data/queries'
 import { useWeekBoard, type MemberWeek } from '@/data/useWeekBoard'
 import type { Week, WeekResult } from '@/data/types'
 import { addDays, dayMonth, isoDow, monthKey, weekRange, weekdayLong, weekdayShort } from '@/domain/dates'
@@ -14,7 +14,11 @@ export function HomePage() {
   const { board, jokers, isLoading } = useWeekBoard()
   const weeks = useWeeks(group.id)
   const results = useWeekResults(group.id)
+  const gyms = useGyms(group.id)
   const navigate = useNavigate()
+
+  // Com a regra de localização ligada, o treino só vale perto de uma academia cadastrada.
+  const needsGym = group.require_location && gyms.isSuccess && gyms.data.length === 0
 
   const lastDow = rules.sundayCounts ? 7 : 6
   const daysLeftInWeek = Math.max(0, lastDow - isoDow(today) + 1)
@@ -77,10 +81,19 @@ export function HomePage() {
             <div className="rounded-2xl border border-ok/30 bg-ok/10 py-4 text-center font-semibold text-ok">
               ✓ Treino de hoje registrado
             </div>
+          ) : needsGym && !isRestDay ? (
+            <div className="space-y-2">
+              <Button className="w-full !rounded-2xl !py-5 text-lg" onClick={() => navigate('/academias')}>
+                📍 Cadastrar uma academia
+              </Button>
+              <p className="text-center text-xs text-muted">
+                Para registrar o treino, o grupo precisa ter uma academia cadastrada.
+              </p>
+            </div>
           ) : (
             <Button
               className="w-full !rounded-2xl !py-5 text-lg"
-              disabled={isRestDay}
+              disabled={isRestDay || (group.require_location && gyms.isLoading)}
               onClick={() => navigate('/check-in')}
             >
               {isRestDay ? 'Domingo é folga' : '📸 Fiz meu treino'}

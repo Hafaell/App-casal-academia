@@ -32,6 +32,12 @@ export function CheckinPage() {
   const [gpsError, setGpsError] = useState('')
 
   const required = group.require_location
+
+  // Sem academia cadastrada não há como conferir o GPS: leva para o cadastro (também vale para quem abre o endereço direto).
+  const noGymYet = required && gyms.isSuccess && gyms.data.length === 0
+  useEffect(() => {
+    if (noGymYet) navigate('/academias', { replace: true })
+  }, [noGymYet, navigate])
   const check: LocationCheck<Gym> | null = position && gyms.data ? checkLocation(position, gyms.data) : null
   const locationOk = !required || check?.status === 'ok'
 
