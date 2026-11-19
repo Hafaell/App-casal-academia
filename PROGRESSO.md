@@ -218,7 +218,7 @@ O banco já guarda regras por grupo, então a base existe. Falta:
 - [ ] Tela para o owner remover membros e trocar o código de convite (hoje o código nunca expira).
 - [ ] Telas de grupo com mais de 2 pessoas revisadas (placar, caixinha e feed foram pensados para 2).
 - [ ] Decidir: uma multa sorteada por semana para todos que falharam (como hoje) ou por pessoa, quando o grupo for grande.
-- [ ] Lojas (App Store e Google Play): plano completo, custos e a ordem econômica de gastos em [appcomerciável.md](./appcomerciável.md). Decisão de 19/11/2026: app nativo em React Native com Expo.
+- [ ] Lojas (App Store e Google Play): plano completo, custos e a ordem econômica de gastos em [app-comerciavel.md](./app-comerciavel.md). Decisão de 19/11/2026: app nativo em React Native com Expo.
 
 ---
 

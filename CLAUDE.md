@@ -2,7 +2,7 @@
 
 PWA para um casal manter a meta de 4 treinos por semana, com check-in por foto, multa sorteada e punição da roleta. Roda no iPhone pela tela inicial, sem Mac e sem App Store.
 
-**Leia primeiro o [PROGRESSO.md](./PROGRESSO.md).** Ele é a fonte da verdade sobre o estado do projeto, o backlog, as decisões pendentes e os riscos. Ao terminar um trabalho, atualize-o (itens prontos, backlog e a data no topo). O [README.md](./README.md) explica a instalação e as regras de negócio.
+**Leia primeiro o [PROGRESSO.md](./PROGRESSO.md).** Ele é a fonte da verdade sobre o estado do projeto, o backlog, as decisões pendentes e os riscos. Ao terminar um trabalho, atualize-o (itens prontos, backlog e a data no topo). O [README.md](./README.md) explica a instalação e as regras de negócio. Para tudo sobre lojas, app nativo (React Native com Expo), custos e segurança comercial, leia o [app-comerciavel.md](./app-comerciavel.md).
 
 ## Sobre quem usa este projeto
 
