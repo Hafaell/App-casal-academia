@@ -38,7 +38,9 @@ export function CheckinPage() {
   const required = group.require_location
 
   // Sem academia cadastrada não há como conferir o GPS: leva para o cadastro (também vale para quem abre o endereço direto).
-  const noGymYet = required && gyms.isSuccess && gyms.data.length === 0
+  // O check-in só vale nas academias que a própria pessoa cadastrou (o banco confere igual).
+  const myGyms = (gyms.data ?? []).filter((g) => g.created_by === userId)
+  const noGymYet = required && gyms.isSuccess && myGyms.length === 0
   useEffect(() => {
     if (noGymYet) navigate('/academias', { replace: true })
   }, [noGymYet, navigate])
@@ -47,7 +49,7 @@ export function CheckinPage() {
   const gate = gateFor<Gym>({
     required,
     trainedToday,
-    gyms: { status: gyms.data ? 'ready' : gyms.isError ? 'error' : 'loading', list: gyms.data ?? [] },
+    gyms: { status: gyms.data ? 'ready' : gyms.isError ? 'error' : 'loading', list: myGyms },
     position,
     gpsError,
   })
@@ -281,7 +283,7 @@ function LocationBanner({ gate, onRetry, retrying }: { gate: Gate<Gym>; onRetry:
       tone = 'warn'
       text = (
         <>
-          Nenhuma academia cadastrada.{' '}
+          Você ainda não cadastrou a sua academia.{' '}
           <Link to="/academias" className="underline">
             Cadastrar agora
           </Link>

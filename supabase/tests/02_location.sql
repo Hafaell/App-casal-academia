@@ -27,7 +27,7 @@ begin
     '%Ative a localização%');
   perform test.expect_error(
     format('insert into public.checkins (group_id, photo_path, lat, lng) values (%L, %L, -23.55, -46.63)', test.id('g'), path),
-    '%Cadastre a academia%');
+    '%Cadastre a sua academia%');
   perform test.expect_error(
     format('insert into public.checkins (group_id, photo_path, lat) values (%L, %L, -23.55)', test.id('g'), path),
     '%incompleta%');
@@ -52,12 +52,12 @@ begin
   -- Cerca de 1 km ao norte: recusa e diz a distância.
   perform test.expect_error(
     format('insert into public.checkins (group_id, photo_path, lat, lng, accuracy_m) values (%L, %L, -23.5415, -46.6333, 20)', test.id('g'), path),
-    '%1001 m da academia mais próxima (Smart Fit Centro)%100 m%');
+    '%1001 m da sua academia mais próxima (Smart Fit Centro)%100 m%');
 
   -- Cerca de 200 m: fora do raio de 100 m.
   perform test.expect_error(
     format('insert into public.checkins (group_id, photo_path, lat, lng, accuracy_m) values (%L, %L, -23.5487, -46.6333, 15)', test.id('g'), path),
-    '%200 m da academia mais próxima%');
+    '%200 m da sua academia mais próxima%');
 
   -- Perto, mas com GPS impreciso demais.
   perform test.expect_error(
@@ -81,10 +81,22 @@ do $$
 declare path text := test.id('g') || '/' || test.id('b') || '/loc1.jpg';
 begin
   assert (select count(*) from public.gyms) = 1, 'parceiro vê a academia do grupo';
+
+  -- A academia do parceiro não vale para o check-in de b, e b não a exclui.
+  perform test.expect_error(
+    format('insert into public.checkins (group_id, photo_path, lat, lng) values (%L, %L, -23.5505, -46.6333)', test.id('g'), path),
+    '%Cadastre a sua academia%');
+  delete from public.gyms where id = test.id('gym');
+  assert (select count(*) from public.gyms where id = test.id('gym')) = 1, 'só quem cadastrou exclui';
+
+  -- b cadastra a própria academia no mesmo lugar.
+  insert into public.gyms (group_id, name, lat, lng) values (test.id('g'), 'Academia da Bia', -23.5505, -46.6333);
+  assert (select created_by from public.gyms where name = 'Academia da Bia') = test.id('b'), 'autor da academia de b';
+
   -- Logo depois da borda (~101 m) recusa; na borda (~99 m) passa.
   perform test.expect_error(
     format('insert into public.checkins (group_id, photo_path, lat, lng) values (%L, %L, -23.54959, -46.6333)', test.id('g'), path),
-    '%101 m da academia mais próxima%');
+    '%101 m da sua academia mais próxima%');
   insert into public.checkins (group_id, photo_path, lat, lng) values (test.id('g'), path, -23.54961, -46.6333);
   perform test.expect_error(format('update public.gyms set lat = 0 where id = %L', test.id('gym')), '%permission denied%');
 end $$;
@@ -107,6 +119,7 @@ begin
   for i in 2..10 loop
     insert into public.gyms (group_id, name, lat, lng) values (test.id('g'), 'Academia ' || i, 0, 0);
   end loop;
+  -- O limite é por pessoa: a academia de b não conta para a.
   perform test.expect_error(
     format('insert into public.gyms (group_id, name, lat, lng) values (%L, ''Onze'', 0, 0)', test.id('g')),
     '%10 academias%');

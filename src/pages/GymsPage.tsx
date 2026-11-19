@@ -20,7 +20,7 @@ const mapsLink = (g: { lat: number; lng: number; place_id?: string | null }) =>
     : `https://www.google.com/maps/search/?api=1&query=${g.lat},${g.lng}`
 
 export function GymsPage() {
-  const { group, nameOf } = useGroup()
+  const { group, nameOf, userId } = useGroup()
   const gyms = useGyms(group.id)
   const add = useAddGym(group.id)
   const remove = useRemoveGym()
@@ -169,6 +169,9 @@ export function GymsPage() {
     )
   }
 
+  const mine = (gyms.data ?? []).filter((g) => g.created_by === userId)
+  const others = (gyms.data ?? []).filter((g) => g.created_by !== userId)
+
   const away = (g: { lat: number; lng: number }) => (here ? formatDistance(distanceMeters(here, g)) : null)
 
   return (
@@ -176,24 +179,23 @@ export function GymsPage() {
       <PageHeader title="Academias" subtitle={group.name} back="/mais" />
       <div className="space-y-4 px-4 pt-4">
         <p className="text-sm text-muted">
-          No check-in o app confere pelo GPS se você está a até <b className="text-ink">{GYM_RADIUS_M} m</b> de uma
-          destas academias.{' '}
+          Cada pessoa cadastra a própria academia. No check-in o app confere pelo GPS se você está a até{' '}
+          <b className="text-ink">{GYM_RADIUS_M} m</b> de uma das <b className="text-ink">suas</b> academias.{' '}
           {group.require_location ? 'Fora desse raio, o treino não é aceito.' : 'A regra está desligada em Grupo e regras.'}
         </p>
 
         <Card>
-          <h2 className="mb-3 font-semibold">Cadastradas</h2>
+          <h2 className="mb-3 font-semibold">Suas academias</h2>
           {gyms.isLoading ? (
             <Spinner />
-          ) : !gyms.data?.length ? (
-            <EmptyState>Nenhuma academia ainda. Cadastre a de vocês abaixo.</EmptyState>
+          ) : !mine.length ? (
+            <EmptyState>Você ainda não cadastrou a sua academia. Cadastre abaixo.</EmptyState>
           ) : (
             <ul className="divide-y divide-line">
-              {gyms.data.map((g) => (
+              {mine.map((g) => (
                 <GymRow
                   key={g.id}
                   gym={g}
-                  by={g.created_by ? nameOf(g.created_by) : undefined}
                   distance={away(g)}
                   removing={remove.isPending}
                   onRemove={() => {
@@ -203,6 +205,17 @@ export function GymsPage() {
                 />
               ))}
             </ul>
+          )}
+          {others.length > 0 && (
+            <>
+              <h3 className="mt-4 mb-1 text-sm font-semibold text-muted">Do resto do grupo</h3>
+              <p className="mb-1 text-xs text-muted">Só aparecem para você saber onde cada um treina. Não valem para o seu check-in.</p>
+              <ul className="divide-y divide-line opacity-80">
+                {others.map((g) => (
+                  <GymRow key={g.id} gym={g} by={g.created_by ? nameOf(g.created_by) : undefined} distance={away(g)} />
+                ))}
+              </ul>
+            </>
           )}
           {gyms.data && gyms.data.length > 0 && (
             <div className="mt-3">
@@ -395,8 +408,9 @@ function GymRow({
   gym: Gym
   by?: string
   distance: string | null
-  removing: boolean
-  onRemove: () => void
+  removing?: boolean
+  /** Só aparece nas academias da própria pessoa. */
+  onRemove?: () => void
 }) {
   return (
     <li className="flex items-start gap-3 py-3">
@@ -413,9 +427,11 @@ function GymRow({
           Ver no mapa
         </a>
       </div>
-      <Button variant="danger" className="min-h-9 shrink-0 px-3 py-1.5 text-xs" onClick={onRemove} disabled={removing}>
-        🗑️ Excluir
-      </Button>
+      {onRemove && (
+        <Button variant="danger" className="min-h-9 shrink-0 px-3 py-1.5 text-xs" onClick={onRemove} disabled={removing}>
+          🗑️ Excluir
+        </Button>
+      )}
     </li>
   )
 }

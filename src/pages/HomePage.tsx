@@ -18,7 +18,7 @@ export function HomePage() {
   const navigate = useNavigate()
 
   // Com a regra de localização ligada, o treino só vale perto de uma academia cadastrada.
-  const needsGym = group.require_location && gyms.isSuccess && gyms.data.length === 0
+  const needsGym = group.require_location && gyms.isSuccess && !gyms.data.some((g) => g.created_by === userId)
 
   const lastDow = rules.sundayCounts ? 7 : 6
   const daysLeftInWeek = Math.max(0, lastDow - isoDow(today) + 1)
@@ -84,10 +84,10 @@ export function HomePage() {
           ) : needsGym && !isRestDay ? (
             <div className="space-y-2">
               <Button className="w-full !rounded-2xl !py-5 text-lg" onClick={() => navigate('/academias')}>
-                📍 Cadastrar uma academia
+                📍 Cadastrar a minha academia
               </Button>
               <p className="text-center text-xs text-muted">
-                Para registrar o treino, o grupo precisa ter uma academia cadastrada.
+                Para registrar o treino, você precisa cadastrar a academia onde treina.
               </p>
             </div>
           ) : (
