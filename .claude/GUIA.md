@@ -11,6 +11,7 @@ Você não precisa decorar nomes. Basta escrever uma frase parecida com as de ba
 | --- | --- | --- |
 | `nova-migracao` | Mudar o banco do jeito seguro e te guiar no SQL Editor | "Cria uma migração para ...", "Muda a regra da multa no banco", "Adiciona uma coluna X" |
 | `conferir-migracoes` | Descobrir o que já está aplicado no Supabase | "Confere se as migrações estão aplicadas", "A migração da caixinha foi aplicada?" |
+| `abrir-no-expo-go` | Ligar o app e abrir no Expo Go do celular | "Abre o app no celular", "Roda no Expo Go", "Sobe o app" |
 | `verificar-app` | Rodar os testes certos conforme o que mudou | "Testa tudo", "Verifica se o app ainda compila", "Está tudo funcionando?" |
 | `rodar-e2e-e-limpar` | Teste contra o banco real e SQL de limpeza | "Roda o teste de ponta a ponta", "Limpa as contas de teste" |
 | `nova-tela` | Criar tela no app no padrão do projeto | "Cria uma tela de ranking", "Adiciona uma aba de estatísticas" |

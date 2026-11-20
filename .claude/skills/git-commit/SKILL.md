@@ -12,11 +12,12 @@ Nunca faça commit, push ou merge por iniciativa própria. Só execute essas aç
 ## Commit e push
 
 - Só quando o usuário pedir (ex: "faz o commit e o push").
-- Sempre na branch `develop`. Se estiver em outra branch, avise e troque para `develop` antes (sem perder alterações), ou pergunte se houver conflito.
+- **Commit e push vão sempre para a branch em que se está trabalhando.** Rode `git branch --show-current` antes e use esse nome: trabalhando na `react-native`, o commit e o push são na `react-native`; trabalhando na `develop`, na `develop`. **Nunca troque de branch** para commitar e nunca envie para uma branch diferente da atual.
 - Antes de commitar: rode `git status` e `git diff` para conferir o que vai entrar.
 - Não inclua arquivos com segredos (`.env`, credenciais, chaves).
 - Mensagem de commit curta, no imperativo, em português, descrevendo o que mudou.
-- Push com `git push origin develop`. Nunca use `--force`.
+- Se o GitHub tiver commits novos na branch, faça `git pull --rebase origin <branch-atual>` e confira que nada foi perdido antes do push.
+- Push com `git push origin <branch-atual>`. Nunca use `--force`.
 
 ## Merge com a main
 
