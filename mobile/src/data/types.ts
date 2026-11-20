@@ -18,6 +18,23 @@ export interface Group {
   timezone: string
   starts_on: string
   require_location: boolean
+  /** Chave Pix de quem guarda a caixinha (para o "Pix copia e cola"). */
+  pix_key?: string | null
+  pix_name?: string | null
+  pix_city?: string | null
+}
+
+export type PixSettings = { pix_key: string | null; pix_name: string | null; pix_city: string | null }
+
+export interface KittyGoal {
+  id: string
+  group_id: string
+  title: string
+  target_amount: number
+  created_by: string | null
+  created_at: string
+  completed_at: string | null
+  withdrawal_id: string | null
 }
 
 export type GroupRulesUpdate = Pick<

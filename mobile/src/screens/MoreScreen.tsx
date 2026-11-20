@@ -9,6 +9,7 @@ import { colors } from '@/lib/theme'
 const items: { to: Href; icon: string; title: string; desc: string }[] = [
   { to: '/academias', icon: '📍', title: 'Academias', desc: `Onde o check-in vale (até ${GYM_RADIUS_M} m pelo GPS)` },
   { to: '/excecoes', icon: '🩹', title: 'Exceções e coringa', desc: 'Doença, viagem, lesão, menstruação e o coringa do mês' },
+  { to: '/historia', icon: '💑', title: 'Nossa história', desc: 'Relatório do mês, treinos juntos e a colagem do ano' },
   { to: '/sequencia', icon: '🔥', title: 'Sequência', desc: 'Semanas seguidas batendo a meta' },
   { to: '/roleta', icon: '🎡', title: 'Roleta de punições', desc: 'Adicionar, editar ou remover punições' },
   { to: '/grupo', icon: '⚙️', title: 'Grupo e regras', desc: 'Meta, multa, convite e seu nome' },

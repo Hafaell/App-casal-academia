@@ -25,6 +25,8 @@ export function createFakeSupabase() {
   const uploads: string[] = []
   const removed: string[] = []
   const rpcCalls: { name: string; args: any }[] = []
+  /** Tabelas que "ainda não existem" no banco (migração não aplicada). */
+  const missingTables = new Set<string>()
 
   const table = (name: string): any[] => (db[name] ??= [])
   const me = () => session?.user.id as string | undefined
@@ -84,6 +86,10 @@ export function createFakeSupabase() {
         return { id: uid('gym'), ...row, created_by: user, created_at: now() }
       case 'kitty_withdrawals':
         return { id: uid('withdrawal'), ...row, withdrawn_by: user, created_at: now() }
+      case 'kitty_goals':
+        if (table('kitty_goals').some((g) => g.group_id === row.group_id && !g.completed_at))
+          return { error: 'duplicate key value violates unique constraint "kitty_goals_one_open"' }
+        return { id: uid('goal'), ...row, created_by: user, created_at: now(), completed_at: null, withdrawal_id: null }
       case 'punishments':
         return { id: uid('punishment'), active: true, ...row, created_at: now() }
       case 'reactions':
@@ -99,6 +105,7 @@ export function createFakeSupabase() {
     let op: { kind: 'select' } | { kind: 'insert'; rows: Row[] } | { kind: 'update'; patch: Row } | { kind: 'delete' } = { kind: 'select' }
 
     function run() {
+      if (missingTables.has(name)) return fail(`Could not find the table 'public.${name}' in the schema cache`)
       const rows = table(name)
       switch (op.kind) {
         case 'select': {
@@ -184,6 +191,21 @@ export function createFakeSupabase() {
       if (p_task_done !== null) r.task_done_at = p_task_done ? now() : null
       return null
     },
+    complete_kitty_goal: ({ p_goal }) => {
+      const g = table('kitty_goals').find((x) => x.id === p_goal)
+      if (!g) throw new Error('Objetivo não encontrado')
+      const paid = table('week_results')
+        .filter((r) => r.group_id === g.group_id && r.owes && r.paid_at)
+        .reduce((s, r) => s + r.fine_amount, 0)
+      const out = table('kitty_withdrawals')
+        .filter((w) => w.group_id === g.group_id)
+        .reduce((s, w) => s + w.amount, 0)
+      if (paid - out < g.target_amount) throw new Error(`A caixinha tem R$ ${paid - out}, falta R$ ${g.target_amount - (paid - out)} para o objetivo`)
+      const id = uid('withdrawal')
+      table('kitty_withdrawals').push({ id, group_id: g.group_id, amount: g.target_amount, description: g.title, withdrawn_by: me(), created_at: now() })
+      Object.assign(g, { completed_at: now(), withdrawal_id: id })
+      return id
+    },
     report_checkin: ({ p_checkin, p_reason }) => {
       const c = table('checkins').find((x) => x.id === p_checkin)
       table('checkin_reports').push({
@@ -259,6 +281,7 @@ export function createFakeSupabase() {
     uploads,
     removed,
     rpcCalls,
+    missingTables,
     /** Cria uma conta e já deixa logado (como se a sessão estivesse salva no aparelho). */
     login(id: string, name: string) {
       users.set(id, { id, email: `${id}@teste.com`, password: 'segredo', name })

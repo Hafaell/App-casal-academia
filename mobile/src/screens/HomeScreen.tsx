@@ -5,12 +5,13 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useQueryClient } from '@tanstack/react-query'
 import { useGroup } from '@/providers/GroupProvider'
 import { Avatar, Button, Card, Spinner, Txt, memberColor } from '@/components/ui'
-import { useGyms, useWeekResults, useWeeks } from '@/data/queries'
+import { useCheckins, useGyms, useWeekResults, useWeeks } from '@/data/queries'
 import { useWeekBoard, type MemberWeek } from '@/data/useWeekBoard'
 import type { Week, WeekResult } from '@/data/types'
-import { addDays, dayMonth, isoDow, monthKey, weekRange, weekdayShort } from '@domain/dates'
+import { addDays, dayMonth, firstOfMonth, isoDow, monthKey, monthName, weekRange, weekdayShort } from '@domain/dates'
 import { formatMoney } from '@domain/rules'
 import { groupStreak } from '@domain/streak'
+import { findTogether } from '@domain/together'
 import { readLocal, writeLocal } from '@/lib/storage'
 import { alpha, colors } from '@/lib/theme'
 
@@ -21,6 +22,8 @@ export function HomeScreen() {
   const weeks = useWeeks(group.id)
   const results = useWeekResults(group.id)
   const gyms = useGyms(group.id)
+  const monthCheckins = useCheckins(group.id, firstOfMonth(today), today)
+  const togetherThisMonth = useMemo(() => findTogether(monthCheckins.data ?? []).days.length, [monthCheckins.data])
   const qc = useQueryClient()
   const [refreshing, setRefreshing] = useState(false)
 
@@ -156,6 +159,22 @@ export function HomeScreen() {
             </View>
             <Txt size={14} muted>
               Recorde: {streak.best} ›
+            </Txt>
+          </Card>
+        </Pressable>
+
+        <Pressable onPress={() => router.push('/historia')} accessibilityRole="link">
+          <Card style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+            <View style={{ flex: 1 }}>
+              <Txt size={14} muted>
+                Nossa história
+              </Txt>
+              <Txt size={18} weight="600">
+                💑 {togetherThisMonth === 0 ? 'Nenhum treino juntos' : `Juntos ${togetherThisMonth} ${togetherThisMonth === 1 ? 'vez' : 'vezes'}`} em {monthName(today)}
+              </Txt>
+            </View>
+            <Txt size={14} muted>
+              Ver ›
             </Txt>
           </Card>
         </Pressable>

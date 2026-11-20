@@ -7,6 +7,7 @@ import { useCheckins, useDeleteCheckin, useExceptions, useJokers, usePhotoUrls, 
 import type { Checkin, CheckinReport, ExceptionDay, Joker, Reaction, Week, WeekResult } from '@/data/types'
 import { addDays, dayMonth, localDate, localTime, mondayOf, weekRange, weekdayShort } from '@domain/dates'
 import { CHECKIN_KINDS, REACTION_EMOJIS, summarizeReactions, type ReactionEmoji } from '@domain/reactions'
+import { findTogether } from '@domain/together'
 import { EXCEPTION_REASONS, formatMoney } from '@domain/rules'
 import { buildSummaryCard, shareImage, type SummaryCard } from '@/lib/summaryCard'
 import { errorMessage } from '@/lib/supabase'
@@ -34,6 +35,7 @@ export function FeedScreen() {
   const reports = useReports(group.id, from)
   const photos = usePhotoUrls([...(checkins.data ?? []).map((c) => c.photo_path), ...(reports.data ?? []).map((r) => r.photo_path)])
   const reactions = useReactions(group.id, (checkins.data ?? []).map((c) => c.id))
+  const together = useMemo(() => findTogether(checkins.data ?? []).checkinIds, [checkins.data])
   const [viewing, setViewing] = useState<Checkin | null>(null)
   const [reporting, setReporting] = useState<Checkin | null>(null)
   const [refreshing, setRefreshing] = useState(false)
@@ -65,6 +67,7 @@ export function FeedScreen() {
             checkin={item.data}
             url={photos.data?.get(item.data.photo_path)}
             reactions={(reactions.data ?? []).filter((r) => r.checkin_id === item.data.id)}
+            together={together.has(item.data.id)}
             canReport={!(weeks.data ?? []).some((w) => w.week_start === mondayOf(item.data.day))}
             onReport={() => setReporting(item.data)}
             onOpen={() => setViewing(item.data)}
@@ -125,6 +128,7 @@ function CheckinCard({
   checkin,
   url,
   reactions,
+  together,
   canReport,
   onReport,
   onOpen,
@@ -132,6 +136,7 @@ function CheckinCard({
   checkin: Checkin
   url?: string
   reactions: Reaction[]
+  together?: boolean
   canReport: boolean
   onReport: () => void
   onOpen: () => void
@@ -162,6 +167,11 @@ function CheckinCard({
           {checkin.kind && (
             <Txt size={12} muted>
               🏷️ {CHECKIN_KINDS[checkin.kind]}
+            </Txt>
+          )}
+          {together && (
+            <Txt size={12} weight="600" color={colors.accent}>
+              💑 Treinaram juntos
             </Txt>
           )}
         </View>

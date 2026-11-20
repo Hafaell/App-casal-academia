@@ -2,7 +2,7 @@
 
 Ponto de partida de toda sessão. Instruções para o Claude Code ficam no [CLAUDE.md](./CLAUDE.md); instalação e regras de negócio no [README.md](./README.md).
 
-Última atualização: 20/11/2026 · Branch de trabalho: `react-native` (só app nativo; o site PWA vive em `develop`/`main`) · Versão do app: 0.1.0
+Última atualização: 20/11/2026 (leva 1 de funções do casal) · Branch de trabalho: `react-native` (só app nativo; o site PWA vive em `develop`/`main`) · Versão do app: 0.1.0
 
 Legenda de confiança: **[Certa]**, **[Provável]**, **[Adivinhando]**.
 
@@ -27,12 +27,16 @@ App para o casal (Rafael e a namorada) manter a academia.
 - **Testado no iPhone via Expo Go em 20/11/2026.** O Expo Go exige conta Expo (gratuita) logada no computador e no celular, e só abre o app com `npx expo start` rodando.
 - O site na Vercel (`https://treino-a-dois-theta.vercel.app`) continua no ar; o app nativo ainda usa o `/api/maps-link` dele para links curtos do Maps.
 - `mobile/.env.local` já está preenchido com a URL e a chave anon (fora do git).
+- **Leva 1 de funções para o casal pronta em 20/11/2026** ([plano-leva-1.md](./plano-leva-1.md)): treino juntos (selo no feed e contagem no Início), caixinha com objetivo e Pix copia e cola, e a tela "Nossa história" (relatório do mês e colagem do ano). Falta aplicar a migração `20261120000001_kitty_goals.sql`.
 
 ### Não verificado ainda
 
+- **Migração `20261120000001_kitty_goals.sql` ainda não aplicada** no Supabase. Sem ela, o objetivo da caixinha fica escondido e salvar a chave Pix dá erro. Passo a passo no fim do [plano-leva-1.md](./plano-leva-1.md).
+- `supabase/tests/05_kitty_goals.sql` foi escrito, mas não rodado (não há Postgres nesta máquina).
+- Pix copia e cola testado contra o exemplo oficial do Banco Central, mas ainda não pago de verdade num app de banco.
+
 - Câmera e GPS dentro da academia, num uso real do dia a dia (precisão do GPS em ambiente fechado).
 - **Primeiro fechamento real** da semana pelo `pg_cron` (domingo às 23h59). Se falhar, o app chama `catch_up_weeks` ao abrir.
-- Migração `20261119000004_kitty_withdrawals.sql`: **confirmar no SQL Editor se foi aplicada** (as demais estão conferidas).
 - Busca de academias pelo nome no Google Maps (precisa de chave `EXPO_PUBLIC_GOOGLE_MAPS_API_KEY`, não ativada).
 
 ---
@@ -52,7 +56,8 @@ App para o casal (Rafael e a namorada) manter a academia.
 ### Prioridade 2: melhorias
 
 - [ ] **Notificações push** (lembrete de treino, aviso de fechamento com punição). Hoje ninguém é avisado sozinho.
-- [ ] Funções extras para o casal, com decisão do que entra agora ou depois: [melhorias-casal.md](./melhorias-casal.md).
+- [x] Leva 1 das funções do casal: F4 treino juntos, F2 caixinha com objetivo e Pix, F1 relatório do mês e colagem do ano ([plano-leva-1.md](./plano-leva-1.md)). O vídeo do ano ficou para depois.
+- [ ] Próximas funções do casal, de 3 em 3: [melhorias-casal.md](./melhorias-casal.md) (sugestão: F3 roleta de prêmios, F5 planejar a semana, F6 exceção com aprovação).
 
 ### Prioridade 3: qualidade
 
@@ -75,7 +80,8 @@ Hoje **qualquer membro edita regras e roleta** e o código de convite nunca expi
 | Treino no domingo | Não conta (configurável por grupo) | |
 | Localização | Até 100 m de uma academia da pessoa; desligável por grupo | Ajustar o raio se o GPS indoor atrapalhar (`gym_radius_m()` no banco e `GYM_RADIUS_M` no app) |
 | Recompensa quando os dois batem a meta | Não existe | Ex.: 4 semanas seguidas dão um prêmio |
-| Destino do dinheiro da caixinha | Só controle | Vocês: date, viagem, presente? |
+| Destino do dinheiro da caixinha | Objetivo com barra de progresso (um aberto por vez) e "Usar o dinheiro" | |
+| Treino juntos | Mesmo dia, até 200 m e até 3 h de diferença; só estatística | Ajustar 200 m / 3 h em `src/domain/together.ts` se errar |
 | Nome do app | "Treino a Dois" (provisório) | Definir |
 | Confirmação de e-mail | Desligada (uso do casal) | Religar se abrir para amigos |
 
@@ -100,14 +106,15 @@ Hoje **qualquer membro edita regras e roleta** e o código de convite nunca expi
 PROGRESSO.md, CLAUDE.md, README.md   documentação do projeto
 app-comerciavel.md                   plano de lojas, custos e segurança comercial
 melhorias-casal.md                   ideias de funções para o casal
+plano-leva-1.md                      plano e resultado da leva 1 (F4, F2, F1)
 mobile/                              app nativo (Expo); detalhes em mobile/README.md
 src/domain/                          regras puras com teste (usadas pelo app via @domain/)
 supabase/migrations/                 esquema, Storage, agendamento e ajustes (nunca editar as aplicadas)
-supabase/tests/                      testes do banco (01 regras, 02 localização)
+supabase/tests/                      testes do banco (01 regras, 02 localização, 03 reações, 04 reports, 05 caixinha com objetivo)
 scripts/e2e-supabase.mjs             teste de ponta a ponta contra o Supabase real
 ```
 
-Tabelas: `profiles`, `groups`, `group_members`, `gyms`, `punishments`, `checkins`, `exceptions`, `jokers`, `weeks`, `week_results`. Funções principais: `create_group`, `join_group`, `leave_group`, `close_week`, `close_due_weeks`, `catch_up_weeks`, `set_debt_status`.
+Tabelas: `profiles`, `groups`, `group_members`, `gyms`, `punishments`, `checkins`, `exceptions`, `jokers`, `weeks`, `week_results`, `reactions`, `checkin_reports`, `kitty_withdrawals`, `kitty_goals`. Funções principais: `create_group`, `join_group`, `leave_group`, `close_week`, `close_due_weeks`, `catch_up_weeks`, `set_debt_status`, `report_checkin`, `complete_kitty_goal`.
 
 ---
 

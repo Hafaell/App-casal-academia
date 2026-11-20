@@ -161,6 +161,108 @@ describe('Caixinha e Histórico', () => {
   })
 })
 
+describe('Treino juntos', () => {
+  it('mostra o selo no feed e a contagem do mês no Início', async () => {
+    seedCouple()
+    await open('/feed')
+    // c1 (Rafael) e c3 (Ana) foram no mesmo dia, na mesma academia, com 1 hora de diferença.
+    expect((await screen.findAllByText('💑 Treinaram juntos')).length).toBe(2)
+
+    await open('/')
+    expect(await screen.findByText('💑 Juntos 1 vez em novembro')).toBeTruthy()
+  })
+})
+
+describe('Caixinha com objetivo e Pix', () => {
+  it('cria o objetivo, junta o dinheiro e usa', async () => {
+    const fake = seedCouple()
+    await open('/caixinha')
+    await press(await screen.findByText('🎯 Criar objetivo'))
+    await type(await screen.findByLabelText('Objetivo'), 'Jantar japonês')
+    await type(screen.getByLabelText('Valor do objetivo (R$)'), '20')
+    await tap('Criar objetivo')
+    expect(await screen.findByText('🎯 Jantar japonês')).toBeTruthy()
+    expect(screen.getByText(/Faltam R\$\s?20/)).toBeTruthy()
+    expect(fake.db.kitty_goals[0]).toMatchObject({ title: 'Jantar japonês', target_amount: 20, created_by: 'u1' })
+
+    // A multa de R$ 30 entra na caixinha: o objetivo de R$ 20 fica completo.
+    await press(await screen.findByText('Marcar pago'))
+    expect(await screen.findByText('Chegou lá! 🎉')).toBeTruthy()
+    await press(screen.getByText('🎉 Usar o dinheiro'))
+    expect(await screen.findByText(/✓ Jantar japonês/)).toBeTruthy()
+    expect(fake.db.kitty_withdrawals).toHaveLength(1)
+    expect(fake.db.kitty_withdrawals[0]).toMatchObject({ amount: 20, description: 'Jantar japonês' })
+    expect(fake.db.kitty_goals[0].completed_at).toBeTruthy()
+    // A retirada do objetivo não tem "Desfazer".
+    expect(screen.queryByText('Desfazer')).toBeNull()
+    // Concluído, dá para criar o próximo.
+    expect(screen.getByText('🎯 Criar objetivo')).toBeTruthy()
+  })
+
+  it('salva a chave Pix e copia o código da multa', async () => {
+    const fake = seedCouple()
+    await open('/caixinha')
+    await press(await screen.findByText('Cadastrar'))
+    await type(await screen.findByLabelText('Chave Pix'), 'rafa@teste.com')
+    await tap('Salvar')
+    // Com a janela aberta, o aviso aparece nela e na raiz do app.
+    expect((await screen.findAllByText('Informe o nome de quem recebe')).length).toBeGreaterThan(0)
+    expect(fake.db.groups[0].pix_key).toBeUndefined()
+
+    await type(screen.getByLabelText('Nome de quem recebe'), 'Rafael')
+    await type(screen.getByLabelText('Cidade'), 'Vitória')
+    await tap('Salvar')
+    expect(await screen.findByText('Chave Pix salva')).toBeTruthy()
+    expect(fake.db.groups[0]).toMatchObject({ pix_key: 'rafa@teste.com', pix_name: 'Rafael', pix_city: 'Vitória' })
+
+    await press(await screen.findByText(/Copiar Pix de R\$\s?30/))
+    expect(await screen.findByText(/Pix copiado/)).toBeTruthy()
+    expect(fakeState.clipboard).toMatch(/^000201/)
+    expect(fakeState.clipboard).toContain('rafa@teste.com')
+    expect(fakeState.clipboard).toContain('540530.00')
+    expect(fakeState.clipboard).toContain('6007Vitoria')
+  })
+
+  it('sem a tabela de objetivos no banco, a Caixinha abre normal', async () => {
+    const fake = seedCouple()
+    fake.missingTables.add('kitty_goals')
+    await open('/caixinha')
+    expect(await screen.findByText('Falta pagar')).toBeTruthy()
+    expect(await screen.findByText('Marcar pago')).toBeTruthy()
+    expect(screen.queryByText('🎯 Criar objetivo')).toBeNull()
+  })
+})
+
+describe('Nossa história', () => {
+  it('mostra o relatório do mês, troca de mês e prepara as imagens', async () => {
+    const { buildSummaryCard, shareImage } = jest.requireMock('@/lib/summaryCard')
+    seedCouple()
+    await open('/mais')
+    await press(await screen.findByText('Nossa história'))
+    expect(await screen.findByText('Novembro de 2026')).toBeTruthy()
+    expect(await screen.findByText('💑 1')).toBeTruthy()
+    expect(screen.getByText('Treinos no mês')).toBeTruthy()
+    expect(screen.getByText('2 treinos')).toBeTruthy() // Rafael
+    expect(screen.getByText('1 treino')).toBeTruthy() // Ana
+    expect(screen.getByText('0/1')).toBeTruthy() // a semana fechada teve multa
+
+    await press(screen.getByLabelText('Mês anterior'))
+    expect(await screen.findByText('Outubro de 2026')).toBeTruthy()
+    expect(screen.getByText('💑 0')).toBeTruthy()
+    await press(screen.getByLabelText('Próximo mês'))
+    expect(await screen.findByText('Novembro de 2026')).toBeTruthy()
+
+    buildSummaryCard.mockClear()
+    await tap('📤 Compartilhar o mês')
+    await press(await screen.findByText('📤 Compartilhar o mês (pronto)'))
+    expect(buildSummaryCard).toHaveBeenCalledWith(expect.objectContaining({ title: 'Novembro de 2026' }))
+    expect(shareImage).toHaveBeenCalled()
+
+    await tap('🖼️ Compartilhar a colagem de 2026')
+    await waitFor(() => expect(buildSummaryCard).toHaveBeenCalledWith(expect.objectContaining({ title: 'Nosso 2026', columns: 4 })))
+  })
+})
+
 describe('Mais', () => {
   it('adiciona uma punição na roleta', async () => {
     const fake = seedCouple()

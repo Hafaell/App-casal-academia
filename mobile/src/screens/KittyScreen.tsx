@@ -1,10 +1,13 @@
 import { useState } from 'react'
 import { Pressable, View } from 'react-native'
+import * as Clipboard from 'expo-clipboard'
 import { useGroup } from '@/providers/GroupProvider'
 import { Avatar, Button, Card, Chip, EmptyState, Field, Input, PageHeader, Screen, Sheet, Spinner, Txt, memberColor, useToast } from '@/components/ui'
-import { useAddKittyWithdrawal, useDeleteKittyWithdrawal, useKittyWithdrawals, useSetDebtStatus, useWeekResults } from '@/data/queries'
-import type { KittyWithdrawal, WeekResult } from '@/data/types'
+import { GoalForm, GoalSection, PixCard, PixForm } from '@/components/KittyGoal'
+import { useAddKittyWithdrawal, useDeleteKittyWithdrawal, useKittyGoals, useKittyWithdrawals, useSetDebtStatus, useWeekResults } from '@/data/queries'
+import type { KittyGoal, KittyWithdrawal, WeekResult } from '@/data/types'
 import { dayMonth, localDate, weekRange } from '@domain/dates'
+import { pixPayload } from '@domain/pix'
 import { formatMoney } from '@domain/rules'
 import { errorMessage } from '@/lib/supabase'
 import { alpha, colors } from '@/lib/theme'
@@ -13,8 +16,11 @@ export function KittyScreen() {
   const { group, members, userId } = useGroup()
   const results = useWeekResults(group.id)
   const withdrawals = useKittyWithdrawals(group.id)
+  const goals = useKittyGoals(group.id)
   const [filter, setFilter] = useState<'open' | 'all'>('open')
   const [showWithdrawModal, setShowWithdrawModal] = useState(false)
+  const [editingGoal, setEditingGoal] = useState<KittyGoal | 'new' | null>(null)
+  const [editingPix, setEditingPix] = useState(false)
 
   const debts = (results.data ?? []).filter((r) => r.owes)
   const paidTotal = debts.filter((d) => d.paid_at).reduce((s, d) => s + d.fine_amount, 0)
@@ -68,6 +74,11 @@ export function KittyScreen() {
         </View>
       </Card>
 
+      {/* Objetivo da caixinha. Se a tabela ainda não existir no banco, some sem travar a tela. */}
+      {goals.isSuccess && <GoalSection goals={goals.data} balance={Math.max(0, balance)} onEdit={setEditingGoal} />}
+
+      <PixCard onEdit={() => setEditingPix(true)} />
+
       {/* Quanto cada um deve */}
       <Card>
         <Txt size={14} weight="600" style={{ marginBottom: 8 }}>
@@ -107,7 +118,13 @@ export function KittyScreen() {
           </Txt>
           <View style={{ gap: 8 }}>
             {(withdrawals.data ?? []).map((w) => (
-              <WithdrawalRow key={w.id} withdrawal={w} myId={userId} />
+              <WithdrawalRow
+                key={w.id}
+                withdrawal={w}
+                myId={userId}
+                // Retirada de um objetivo concluído não se desfaz: o objetivo continuaria marcado como feito.
+                fromGoal={(goals.data ?? []).some((g) => g.withdrawal_id === w.id)}
+              />
             ))}
           </View>
         </Card>
@@ -133,6 +150,16 @@ export function KittyScreen() {
       ) : (
         visible.map((d) => <DebtCard key={`${d.week_id}-${d.user_id}`} debt={d} />)
       )}
+
+      <Sheet open={editingGoal !== null} onClose={() => setEditingGoal(null)}>
+        {editingGoal !== null && (
+          <GoalForm groupId={group.id} goal={editingGoal === 'new' ? null : editingGoal} onClose={() => setEditingGoal(null)} />
+        )}
+      </Sheet>
+
+      <Sheet open={editingPix} onClose={() => setEditingPix(false)}>
+        {editingPix && <PixForm onClose={() => setEditingPix(false)} />}
+      </Sheet>
 
       {/* Janela de retirada */}
       <Sheet open={showWithdrawModal} onClose={() => setShowWithdrawModal(false)}>
@@ -209,7 +236,7 @@ function WithdrawForm({ groupId, maxAmount, onClose }: { groupId: string; maxAmo
 // Linha de retirada no histórico
 // ---------------------------------------------------------------------
 
-function WithdrawalRow({ withdrawal, myId }: { withdrawal: KittyWithdrawal; myId: string | undefined }) {
+function WithdrawalRow({ withdrawal, myId, fromGoal }: { withdrawal: KittyWithdrawal; myId: string | undefined; fromGoal: boolean }) {
   const { group } = useGroup()
   const deleteWithdrawal = useDeleteKittyWithdrawal()
   const toast = useToast()
@@ -233,7 +260,7 @@ function WithdrawalRow({ withdrawal, myId }: { withdrawal: KittyWithdrawal; myId
           {`${dayMonth(day)}/${day.slice(0, 4)}`}
         </Txt>
       </View>
-      {isMine && (
+      {isMine && !fromGoal && (
         <Pressable
           onPress={() => deleteWithdrawal.mutate(withdrawal.id, { onError: (err) => toast(errorMessage(err), 'error') })}
           disabled={deleteWithdrawal.isPending}
@@ -259,6 +286,22 @@ function DebtCard({ debt }: { debt: WeekResult }) {
   const toast = useToast()
   const run = (patch: { paid?: boolean; taskDone?: boolean }) =>
     setStatus.mutate({ weekId: debt.week_id, userId: debt.user_id, ...patch }, { onError: (err) => toast(errorMessage(err), 'error') })
+
+  async function copyPix() {
+    try {
+      const code = pixPayload({
+        key: group.pix_key ?? '',
+        name: group.pix_name ?? '',
+        city: group.pix_city ?? '',
+        amount: debt.fine_amount,
+        message: `Multa ${dayMonth(debt.week_start)}`,
+      })
+      await Clipboard.setStringAsync(code)
+      toast('Pix copiado. Abra o app do banco e use "Pix copia e cola".')
+    } catch (err) {
+      toast(errorMessage(err), 'error')
+    }
+  }
 
   return (
     <Card>
@@ -297,6 +340,11 @@ function DebtCard({ debt }: { debt: WeekResult }) {
           <View style={{ flex: 1 }} />
         )}
       </View>
+      {!debt.paid_at && debt.fine_amount > 0 && group.pix_key && (
+        <Button variant="ghost" style={{ marginTop: 8 }} textStyle={{ color: colors.accent }} onPress={copyPix}>
+          {`📋 Copiar Pix de ${formatMoney(debt.fine_amount)}`}
+        </Button>
+      )}
     </Card>
   )
 }

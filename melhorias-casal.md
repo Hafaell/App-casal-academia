@@ -1,6 +1,6 @@
 # Melhorias para o casal: o que construir e quando
 
-Criado em 19/11/2026. Este arquivo reúne as ideias para tornar o app mais valioso para casais (e, por consequência, mais fácil de vender). **Nada aqui foi construído ainda.** A ideia é decidir, item por item, o que entra agora e o que fica para depois.
+Criado em 19/11/2026. Este arquivo reúne as ideias para tornar o app mais valioso para casais (e, por consequência, mais fácil de vender). **Leva 1 pronta em 20/11/2026: F4, F2 e F1 (sem o vídeo)**, ver [plano-leva-1.md](./plano-leva-1.md). A ideia é decidir, item por item, o que entra agora e o que fica para depois.
 
 Ele é separado do [MELHORIAS.md](./MELHORIAS.md), que guarda as melhorias técnicas anteriores, e complementa o [app-comerciavel.md](./app-comerciavel.md) (lojas, custos, segurança) e o [PROGRESSO.md](./PROGRESSO.md) (estado do projeto).
 
@@ -43,7 +43,7 @@ Cada item tem uma caixa de decisão. Marque **Agora**, **Depois** ou **Não**.
 - **Esforço:** relatório **M**; colagem estática **M** (parecida com o cartão da semana, que já existe); vídeo **G** (melhor no app nativo).
 - **Banco:** não precisa de mudança, só lê check-ins e semanas fechadas.
 - **Dá para fazer agora na web?** O relatório e a colagem, sim. O vídeo, só no nativo.
-- **Decisão:** relatório: [ ] Agora [ ] Depois [ ] Não · colagem: [ ] Agora [ ] Depois [ ] Não · vídeo: [ ] Agora [ ] Depois [ ] Não
+- **Decisão:** relatório: [x] Agora (**feito**) · colagem: [x] Agora (**feita**) · vídeo: [x] Depois
 
 ### F2. Caixinha com objetivo
 
@@ -52,7 +52,7 @@ Cada item tem uma caixa de decisão. Marque **Agora**, **Depois** ou **Não**.
 - **Esforço:** **M** (objetivo e progresso); **M** a mais para o Pix copia e cola.
 - **Banco:** tabela nova de objetivos (migração nova). Não mexe em `close_week`.
 - **Cuidado:** o app nunca deve receber nem guardar o dinheiro; só registra e gera o código **[Certa]** (intermediar pagamento exigiria regras do Banco Central).
-- **Decisão:** objetivo: [ ] Agora [ ] Depois [ ] Não · Pix copia e cola: [ ] Agora [ ] Depois [ ] Não
+- **Decisão:** objetivo: [x] Agora (**feito**) · Pix copia e cola: [x] Agora (**feito**)
 
 ### F3. Roleta de prêmios
 
@@ -70,7 +70,7 @@ Cada item tem uma caixa de decisão. Marque **Agora**, **Depois** ou **Não**.
 - **Esforço:** **M**.
 - **Banco:** pode ser só uma consulta sobre check-ins existentes.
 - **Atenção:** se o "treino a dois" valer um treino a mais para a meta, vira **regra de dinheiro** (mexe em `close_week`, `rules.ts` e `supabase/tests/01_rules.sql`). A opção segura é só estatística e prêmio.
-- **Decisão:** [ ] Agora [ ] Depois [ ] Não
+- **Decisão:** [x] Agora (**feito**, só estatística: mesmo dia, até 200 m e até 3 h)
 
 ### F5. Planejar a semana e cutucar o parceiro
 

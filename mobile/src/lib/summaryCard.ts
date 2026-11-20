@@ -17,9 +17,11 @@ export interface SummaryCardData {
   title: string
   subtitle: string
   lines: SummaryLine[]
-  /** Endereços (assinados) das fotos da semana; usa até 6. */
+  /** Endereços (assinados) das fotos; usa até 6 (3 colunas) ou 12 (4 colunas). */
   photos: string[]
   footer: string
+  /** 3 colunas de fotos em pé (semana, mês) ou 4 de fotos quadradas (colagem do ano). */
+  columns?: 3 | 4
 }
 
 const W = 1080
@@ -66,21 +68,22 @@ export async function buildSummaryCard(d: SummaryCardData): Promise<SummaryCard>
   textBlock(d.title, { fontSize: 64, color: '#eef2f6', weight: FontWeight.Bold }).paint(canvas, 64, 120 - 64)
   textBlock(d.subtitle, { fontSize: 38, color: '#8b97a8' }).paint(canvas, 64, 176 - 38)
 
-  // Fotos: grade de 3 colunas, até 2 linhas.
-  const photos = (await Promise.all(d.photos.slice(0, 6).map(loadPhoto))).filter((p): p is SkImage => p !== null)
+  // Fotos: 3 colunas em pé (até 2 linhas) ou 4 colunas quadradas (até 3 linhas).
+  const cols = d.columns ?? 3
+  const photos = (await Promise.all(d.photos.slice(0, cols * (cols === 4 ? 3 : 2)).map(loadPhoto))).filter((p): p is SkImage => p !== null)
   const gap = 16
-  const cellW = (W - 128 - gap * 2) / 3
-  const cellH = cellW * 1.25
+  const cellW = (W - 128 - gap * (cols - 1)) / cols
+  const cellH = cols === 4 ? cellW : cellW * 1.25
   const top = 224
   photos.forEach((img, i) => {
-    const x = 64 + (i % 3) * (cellW + gap)
-    const y = top + Math.floor(i / 3) * (cellH + gap)
+    const x = 64 + (i % cols) * (cellW + gap)
+    const y = top + Math.floor(i / cols) * (cellH + gap)
     canvas.save()
     canvas.clipRRect(Skia.RRectXY(Skia.XYWHRect(x, y, cellW, cellH), 24, 24), ClipOp.Intersect, true)
     cover(canvas, img, x, y, cellW, cellH)
     canvas.restore()
   })
-  const rows = photos.length === 0 ? 0 : photos.length > 3 ? 2 : 1
+  const rows = Math.ceil(photos.length / cols)
   let y = top + rows * (cellH + gap) + (rows ? 40 : 0)
 
   // Placar de cada pessoa.
@@ -105,8 +108,8 @@ export async function buildSummaryCard(d: SummaryCardData): Promise<SummaryCard>
  * Abre o compartilhamento do aparelho. Devolve false quando não deu (aparelho sem suporte):
  * quem chamou mostra a imagem para a pessoa ver.
  */
-export async function shareImage(card: SummaryCard): Promise<boolean> {
+export async function shareImage(card: SummaryCard, dialogTitle = 'Compartilhar a semana'): Promise<boolean> {
   if (!(await Sharing.isAvailableAsync())) return false
-  await Sharing.shareAsync(card.uri, { mimeType: 'image/jpeg', dialogTitle: 'Compartilhar a semana', UTI: 'public.jpeg' })
+  await Sharing.shareAsync(card.uri, { mimeType: 'image/jpeg', dialogTitle, UTI: 'public.jpeg' })
   return true
 }

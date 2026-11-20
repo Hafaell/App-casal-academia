@@ -80,6 +80,10 @@ jest.mock('react-native-svg', () => {
 
 jest.mock('expo-clipboard', () => ({
   getStringAsync: async () => require('@/test/fakeState').fakeState.clipboard,
+  setStringAsync: async (text: string) => {
+    require('@/test/fakeState').fakeState.clipboard = text
+    return true
+  },
 }))
 
 let mockUuid = 0

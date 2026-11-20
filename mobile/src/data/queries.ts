@@ -11,7 +11,9 @@ import type {
   GroupRulesUpdate,
   Gym,
   Joker,
+  KittyGoal,
   KittyWithdrawal,
+  PixSettings,
   Member,
   Punishment,
   Reaction,
@@ -46,6 +48,7 @@ export const keys = {
   punishments: (gid: string) => ['punishments', gid] as const,
   gyms: (gid: string) => ['gyms', gid] as const,
   withdrawals: (gid: string) => ['withdrawals', gid] as const,
+  goals: (gid: string) => ['kitty-goals', gid] as const,
 }
 
 // ---------------------------------------------------------------------
@@ -491,5 +494,61 @@ export function useDeleteKittyWithdrawal() {
     mutationFn: async (id: string) =>
       must(await supabase.from('kitty_withdrawals').delete().eq('id', id)),
     onSuccess: () => invalidate('withdrawals'),
+  })
+}
+
+// ---------------------------------------------------------------------
+// Caixinha: objetivo e chave Pix
+// ---------------------------------------------------------------------
+
+/**
+ * Objetivos da caixinha (o mais novo primeiro). Sem retentativa: se a tabela ainda não
+ * existir no banco, a tela só esconde o objetivo, sem travar a Caixinha.
+ */
+export function useKittyGoals(gid: string) {
+  return useQuery({
+    queryKey: keys.goals(gid),
+    retry: false,
+    queryFn: async () =>
+      must(
+        await supabase.from('kitty_goals').select('*').eq('group_id', gid).order('created_at', { ascending: false }),
+      ) as KittyGoal[],
+  })
+}
+
+export function useSaveKittyGoal(gid: string) {
+  const invalidate = useInvalidate()
+  return useMutation({
+    mutationFn: async (g: { id?: string; title: string; target_amount: number }) => {
+      const patch = { title: g.title.trim().slice(0, 60), target_amount: g.target_amount }
+      if (g.id) return must(await supabase.from('kitty_goals').update(patch).eq('id', g.id))
+      return must(await supabase.from('kitty_goals').insert({ group_id: gid, ...patch }))
+    },
+    onSuccess: () => invalidate('kitty-goals'),
+  })
+}
+
+/** Usa o dinheiro: o banco registra a retirada e conclui o objetivo de uma vez só. */
+export function useCompleteKittyGoal() {
+  const invalidate = useInvalidate()
+  return useMutation({
+    mutationFn: async (id: string) => must(await supabase.rpc('complete_kitty_goal', { p_goal: id })) as string,
+    onSuccess: () => invalidate('kitty-goals', 'withdrawals'),
+  })
+}
+
+export function useDeleteKittyGoal() {
+  const invalidate = useInvalidate()
+  return useMutation({
+    mutationFn: async (id: string) => must(await supabase.from('kitty_goals').delete().eq('id', id)),
+    onSuccess: () => invalidate('kitty-goals'),
+  })
+}
+
+export function useSavePix(gid: string) {
+  const invalidate = useInvalidate()
+  return useMutation({
+    mutationFn: async (p: PixSettings) => must(await supabase.from('groups').update(p).eq('id', gid)),
+    onSuccess: () => invalidate('my-groups'),
   })
 }

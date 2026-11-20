@@ -142,3 +142,33 @@ it('monta o cartão da semana com as fotos e o placar', async () => {
   expect(pixel(img, 64 + 50, 224 + 50)[2]).toBeGreaterThan(150)
   expect(pixel(img, 20, 20)[2]).toBeLessThan(40)
 })
+
+it('monta a colagem do ano com 12 fotos quadradas e o texto cabe embaixo', async () => {
+  const photo = Uint8Array.from(Buffer.from(cameraPhoto(), 'base64'))
+  const fetchMock = jest.spyOn(globalThis, 'fetch').mockImplementation(
+    async () => ({ ok: true, arrayBuffer: async () => photo.buffer.slice(0) }) as unknown as Response,
+  )
+  const card = await buildSummaryCard({
+    title: 'Nosso 2026',
+    subtitle: 'Rafael e Ana',
+    columns: 4,
+    photos: Array.from({ length: 14 }, (_, i) => `https://fotos.test/${i}.jpg`),
+    lines: [
+      { name: 'Treinos', color: '#c6f432', text: '180' },
+      { name: 'Juntos', color: '#f472b6', text: '42' },
+      { name: 'Semanas batidas', color: '#38bdf8', text: '40' },
+    ],
+    footer: 'Treino a Dois',
+  })
+  // Só 12 fotos entram.
+  expect(fetchMock).toHaveBeenCalledTimes(12)
+  fetchMock.mockRestore()
+  const bytes = mockFiles.get(card.uri)!
+  if (process.env.COLAGEM_TESTE) require('fs').writeFileSync(process.env.COLAGEM_TESTE, bytes)
+  const img = Skia.Image.MakeImageFromEncoded(Skia.Data.fromBytes(bytes))!
+  expect([img.width(), img.height()]).toEqual([1080, 1350])
+  const cell = (1080 - 128 - 16 * 3) / 4
+  // Última foto (4ª coluna, 3ª linha) azul; a faixa logo abaixo da grade é fundo escuro.
+  expect(pixel(img, Math.round(64 + 3 * (cell + 16) + cell / 2), Math.round(224 + 2 * (cell + 16) + cell / 2))[2]).toBeGreaterThan(150)
+  expect(pixel(img, 540, Math.round(224 + 3 * cell + 2 * 16 + 8))[2]).toBeLessThan(40)
+})

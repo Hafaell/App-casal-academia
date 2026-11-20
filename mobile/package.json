@@ -46,7 +46,7 @@
     "ios": "expo start --ios",
     "typecheck": "tsc --noEmit",
     "test": "jest",
-    "doctor": "expo-doctor",
+    "doctor": "npx --yes expo-doctor",
     "export": "expo export --platform ios --platform android"
   },
   "private": true,
@@ -61,6 +61,9 @@
     ],
     "setupFilesAfterEnv": [
       "./jest.setup.ts"
+    ],
+    "modulePaths": [
+      "<rootDir>/node_modules"
     ]
   }
 }
