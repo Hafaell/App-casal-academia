@@ -15,6 +15,10 @@ O dono do projeto **não conhece nada de desenvolvimento de aplicativos para cel
 - Diga o que fazer **se der errado** (a mensagem de erro mais provável e a saída).
 - Não presuma que ele sabe abrir terminal, instalar programas ou ler mensagens de erro. Quando houver dúvida, prefira explicar demais a de menos.
 
+## Skills e agentes do projeto
+
+Em `.claude/skills/` e `.claude/agents/`, com frases de exemplo no [.claude/GUIA.md](./.claude/GUIA.md). Use-os quando o pedido bater: `nova-migracao` (mudar o banco), `conferir-migracoes`, `verificar-app` (antes de dar tarefa por terminada), `rodar-e2e-e-limpar`, `nova-tela`, `pre-lancamento`, e os agentes só leitura `revisor-regras-dinheiro`, `auditor-rls`, `cacador-de-datas` e `revisor-de-privacidade`. O hook `Stop` roda o typecheck do que mudou.
+
 ## Comandos
 
 ```bash
