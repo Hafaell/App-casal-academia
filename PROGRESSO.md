@@ -2,7 +2,7 @@
 
 Este arquivo é o ponto de partida de toda nova sessão. Ele diz onde o projeto está, o que falta e para onde queremos ir.
 
-Última atualização: 19/11/2026 · Branch de trabalho: `develop` (app nativo: `react-native`) · Versão do app: 0.1.0
+Última atualização: 20/11/2026 (branch `react-native` limpa: só app nativo, `src/domain`, `supabase` e teste e2e; o site fica em `develop`/`main`) · Branch de trabalho: `develop` (app nativo: `react-native`) · Versão do app: 0.1.0
 
 Instruções para sessões do Claude Code ficam no [CLAUDE.md](./CLAUDE.md).
 

@@ -2,15 +2,29 @@
   "extends": "expo/tsconfig.base",
   "compilerOptions": {
     "strict": true,
-    "types": ["jest", "node"],
+    "types": [
+      "jest",
+      "node"
+    ],
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
     "paths": {
-      "@/*": ["./src/*"],
-      "@domain/*": ["../src/domain/*"]
+      "@/*": [
+        "./src/*"
+      ],
+      "@domain/*": [
+        "../src/domain/*"
+      ]
     }
   },
-  "include": ["src", "../src/domain", "expo-env.d.ts", "jest.setup.ts"],
-  "exclude": ["../src/domain/**/*.test.ts", "node_modules"]
+  "include": [
+    "src",
+    "../src/domain",
+    "jest.setup.ts"
+  ],
+  "exclude": [
+    "../src/domain/**/*.test.ts",
+    "node_modules"
+  ]
 }

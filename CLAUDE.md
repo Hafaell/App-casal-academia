@@ -1,6 +1,6 @@
 # Treino a Dois
 
-PWA para um casal manter a meta de 4 treinos por semana, com check-in por foto, multa sorteada e punição da roleta. Roda no iPhone pela tela inicial, sem Mac e sem App Store.
+App (nativo, para iPhone e Android) para um casal manter a meta de 4 treinos por semana, com check-in por foto, multa sorteada e punição da roleta. O site PWA fica nas branches `develop` e `main`.
 
 **Leia primeiro o [PROGRESSO.md](./PROGRESSO.md).** Ele é a fonte da verdade sobre o estado do projeto, o backlog, as decisões pendentes e os riscos. Ao terminar um trabalho, atualize-o (itens prontos, backlog e a data no topo). O [README.md](./README.md) explica a instalação e as regras de negócio. Para tudo sobre lojas, app nativo (React Native com Expo), custos e segurança comercial, leia o [app-comerciavel.md](./app-comerciavel.md).
 
@@ -17,18 +17,16 @@ O dono do projeto **não conhece nada de desenvolvimento de aplicativos para cel
 
 ## Comandos
 
+Na raiz (regras compartilhadas e banco):
+
 ```bash
-npm run dev          # desenvolvimento (precisa do .env.local)
 npm test             # testes das regras em src/domain
 npm run typecheck
-npm run build        # tsc -b && vite build; gera o PWA em dist/
 npm run test:e2e     # ponta a ponta contra o Supabase REAL do .env.local
 npm run test:db      # regras do banco; precisa de psql e de um Postgres VAZIO
 ```
 
-Antes de dizer que algo está pronto, rode `npm test`, `npm run typecheck` e `npm run build`.
-
-App nativo (branch `react-native`, pasta `mobile/`), rodando de dentro de `mobile/`:
+App nativo, de dentro de `mobile/` (rode `npm install` antes na primeira vez):
 
 ```bash
 npx expo start       # abre no Expo Go (precisa do mobile/.env.local)
@@ -42,22 +40,20 @@ Mexeu no app nativo: rode os quatro últimos. Mexeu em `src/domain/`: rode tamb�
 
 ## Arquitetura
 
-- React 19, TypeScript estrito, Vite 7, Tailwind 4, vite-plugin-pwa. Alias `@/` aponta para `src/`.
-- `src/domain/`: regras puras com teste (datas, meta, exceções, sequência). As telas não calculam meta nem sequência.
-- `src/data/queries.ts`: único lugar que fala com o Supabase (hooks do React Query). As telas não chamam o Supabase direto.
-- `src/pages/`: uma tela por arquivo. `src/app/`: contextos de login e grupo.
+Esta branch (`react-native`) tem **só o app nativo**. O site (PWA em React + Vite) vive nas branches `develop` e `main`.
+
+- `mobile/`: app nativo (Expo SDK 58, React Native, Expo Router). `mobile/src/data/queries.ts` é o único lugar do app que fala com o Supabase. Detalhes em [mobile/README.md](./mobile/README.md).
+- `src/domain/`: regras puras com teste (datas, meta, exceções, sequência). O app usa direto (alias `@domain/`, via `metro.config.js`), sem copiar. As telas não calculam meta nem sequência.
 - `supabase/migrations/`: esquema, Storage e agendamento. `supabase/tests/`: testes do banco em Postgres puro.
-- `mobile/`: app nativo (Expo SDK 58, React Native, Expo Router). Usa as regras de `src/domain/` direto (alias `@domain/`, via `metro.config.js`), sem copiar. `mobile/src/data/queries.ts` é o único lugar do app que fala com o Supabase. Detalhes e passo a passo em [mobile/README.md](./mobile/README.md).
+- `scripts/e2e-supabase.mjs`: teste de ponta a ponta contra o Supabase real.
 
 ## Regras que não podem ser quebradas
 
 - **O banco é a fonte da verdade do que vale dinheiro** (`close_week` e os gatilhos de check-in, exceção e coringa). O cálculo em `src/domain/rules.ts` serve só para o placar ao vivo e precisa ficar idêntico ao do banco. Mudou uma regra: mude os dois e atualize `supabase/tests/01_rules.sql`.
 - **Nunca edite uma migração já aplicada.** Crie um arquivo novo `AAAAMMDDHHMMSS_descricao.sql`. As três migrações atuais já estão aplicadas em produção.
 - **Datas** são strings `AAAA-MM-DD` no fuso do grupo. Não use o `Date` do aparelho para decidir "hoje"; use `src/domain/dates.ts`.
-- Estilos base ficam em `@layer base` em `src/index.css`. Um estilo fora de camada sobrescreve os utilitários do Tailwind.
-- Importe de `react-router`, não de `react-router-dom`.
 - Interface, erros e comentários em português do Brasil. Nomes de código em inglês, menos os termos do domínio (`caixinha`, `coringa`).
-- Commits em português, descrevendo o que muda para o usuário. Branch de trabalho: `develop`.
+- Commits em português, descrevendo o que muda para o usuário. Branch de trabalho: `react-native`.
 
 ## Infraestrutura
 
@@ -65,12 +61,9 @@ Mexeu no app nativo: rode os quatro últimos. Mexeu em `src/domain/`: rode tamb�
 | --- | --- |
 | Supabase | projeto `treino-a-dois`, ref `hyxvesqvvhueaigclpbl`, região São Paulo (`sa-east-1`), organização "Hafael", plano gratuito |
 | URL da API | `https://hyxvesqvvhueaigclpbl.supabase.co` |
-| Hospedagem | Vercel, projeto `treino-a-dois`, time `hafael1` (plano Hobby). Produção: `https://treino-a-dois-theta.vercel.app` |
+| Site (outras branches) | Vercel, projeto `treino-a-dois`. Produção: `https://treino-a-dois-theta.vercel.app`. O app nativo ainda chama `/api/maps-link` desse site para links curtos do Maps |
 | Repositório | `Hafaell/App-casal-academia`, branches `develop` e `main` |
 
-- **Publicar:** desde 19/11/2026 o GitHub está ligado à Vercel. Push na `main` publica em produção; push na `develop` (ou outra branch) gera um Preview. Fluxo: trabalhar na `develop` e levar para a `main`. A CLI (`npx vercel deploy --prod`) continua funcionando como plano B; a pasta `.vercel/` (fora do git) guarda o vínculo com o projeto.
-- **`api/maps-link.ts`:** função da Vercel que segue os redirecionamentos de links curtos do Google/Apple Maps (lista fechada de domínios) para o cadastro de academia por link colado. Não roda no `vite dev`; teste num Preview com `npx vercel curl`.
-- As variáveis `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY` estão cadastradas na Vercel em Production e Preview, como tipo `config` (são públicas por desenho).
 - `.env.local` (fora do git) guarda `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY`. A chave anon é pública por desenho; a `service_role` nunca entra no projeto nem no front-end.
 - A mesma organização do Supabase tem outro projeto, "Financeiro", que **não é deste app**. Não mexa nele.
 - As migrações foram aplicadas **pelo SQL Editor do painel**, não pela CLI. Por isso a tabela de controle da CLI (`supabase_migrations.schema_migrations`) não existe: um `supabase db push` tentaria aplicar tudo de novo. Para migrações novas, use o SQL Editor ou registre as antigas antes com `supabase migration repair`.
@@ -81,7 +74,7 @@ Mexeu no app nativo: rode os quatro últimos. Mexeu em `src/domain/`: rode tamb�
 ## Ambiente desta máquina
 
 - Windows 11, Node 26 e npm 11 (o projeto foi escrito com Node 22; testes e build passam nos dois).
-- Não há `psql`, Docker, `gh` nem CLI da Supabase instalados. A CLI da Vercel roda por `npx vercel`. `npm run test:db` não roda aqui sem instalar um Postgres.
+- Não há `psql`, Docker, `gh` nem CLI da Supabase instalados. `npm run test:db` não roda aqui sem instalar um Postgres.
 
 ## Teste de ponta a ponta
 

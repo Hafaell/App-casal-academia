@@ -4,27 +4,23 @@ App para o casal não desanimar da academia: cada um precisa fazer 4 treinos por
 
 > Estado do projeto, o que falta e o que fazer para colocar no ar: veja [PROGRESSO.md](./PROGRESSO.md).
 
-É um web app instalável (PWA): abre no Safari do iPhone e vira um ícone na tela inicial, sem Mac e sem App Store.
+Esta branch (`react-native`) tem só o app nativo (iPhone e Android), na pasta `mobile/`. O site PWA vive nas branches `develop` e `main`.
 
 ## Estrutura
 
 ```
-src/
-  domain/      Regras puras (datas, meta, exceções, sequência) + testes
-  data/        Acesso ao Supabase (React Query) e tipos
-  app/         Login e grupo atual (contextos)
-  components/  Layout com abas e componentes de interface
-  pages/       Uma tela por arquivo
+mobile/        App nativo (Expo, React Native)
+src/domain/    Regras puras (datas, meta, exceções, sequência) + testes, usadas pelo app
 supabase/
   migrations/  Banco: tabelas, regras, segurança (RLS), fotos e agendamento
   tests/       Testes das regras do banco em Postgres puro
+scripts/       Teste de ponta a ponta contra o Supabase real
 ```
 
 | Camada | Tecnologia |
 | --- | --- |
-| Front-end | React 19, TypeScript, Vite, Tailwind CSS 4, vite-plugin-pwa |
+| App | React Native, Expo, TypeScript |
 | Dados | Supabase: login, Postgres, Storage (fotos) e pg_cron (fechamento da semana) |
-| Hospedagem | Vercel (plano gratuito) |
 
 As regras que valem dinheiro ficam **no banco**, não no aparelho:
 

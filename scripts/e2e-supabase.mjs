@@ -1,5 +1,5 @@
 // Teste de ponta a ponta contra o projeto Supabase real (.env.local).
-// Usa as mesmas chamadas de src/data/queries.ts.
+// Usa as mesmas chamadas de mobile/src/data/queries.ts.
 //
 //   node scripts/e2e-supabase.mjs
 //
