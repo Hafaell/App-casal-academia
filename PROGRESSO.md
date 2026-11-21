@@ -2,7 +2,7 @@
 
 Ponto de partida de toda sessão. Instruções para o Claude Code ficam no [CLAUDE.md](./CLAUDE.md); instalação e regras de negócio no [README.md](./README.md).
 
-Última atualização: 21/11/2026 (leva 3 de funções do casal) · Branch de trabalho: `react-native` (só app nativo; o site PWA vive em `develop`/`main`) · Versão do app: 0.1.0
+Última atualização: 21/11/2026 (leva 4: pagamento, senha e exportar dados) · Branch de trabalho: `react-native` (só app nativo; o site PWA vive em `develop`/`main`) · Versão do app: 0.1.0
 
 Legenda de confiança: **[Certa]**, **[Provável]**, **[Adivinhando]**.
 
@@ -34,7 +34,7 @@ App para o casal (Rafael e a namorada) manter a academia.
 ### Não verificado ainda
 
 - Migrações `20261120000001_kitty_goals.sql` e `20261121000001_rewards_plans_exception_review.sql` **aplicadas em 21/11/2026** (pelo SQL Editor, com "Success"; as tabelas novas respondem na API). Ainda falta **usar** as telas novas no celular para conferir.
-- Testes do banco (01 a 07) **rodaram e passaram em 21/11/2026** num Postgres portátil local, com um leitor em Node no lugar do `psql` (feito numa pasta temporária, fora do projeto). `npm run test:db` continua precisando de `psql`.
+- Testes do banco (01 a 08) **rodaram e passaram em 21/11/2026** num Postgres portátil local, com um leitor em Node no lugar do `psql` (feito numa pasta temporária, fora do projeto). `npm run test:db` continua precisando de `psql`.
 - Compartilhar imagem (stories, colagem, semana) ainda não conferido no iPhone depois da troca para um toque só.
 
 - Câmera e GPS dentro da academia, num uso real do dia a dia (precisão do GPS em ambiente fechado).
@@ -62,6 +62,8 @@ App para o casal (Rafael e a namorada) manter a academia.
 - [x] Leva 2: F3 roleta de prêmios, F5 planejar a semana e "vamos?", F6 exceção com resposta do parceiro ([plano-leva-2.md](./plano-leva-2.md)).
 - [x] Leva 3: limite mensal de exceções, F8 desafio do mês, F11 fotos de evolução ([plano-leva-3.md](./plano-leva-3.md)).
 - Fora da lista por decisão do Rafael (21/11/2026): F7 treino automático pelo relógio e F9 desafio entre os dois. Sobra F10 (parcerias), que é trabalho de negócio.
+- [x] Leva 4: confirmação do pagamento da multa, recuperar senha por código e exportar meus dados ([plano-leva-4.md](./plano-leva-4.md)). Migração `20261121000003_payment_confirmation.sql` aplicada em 21/11/2026. **Recuperar senha ainda não funciona de verdade:** precisa de e-mail próprio (SMTP) para o Supabase mandar o código (item 12 do pendencias.md).
+- **Tudo o que ainda falta está em [pendencias.md](./pendencias.md)**, numerado.
 
 ### Prioridade 3: qualidade
 
@@ -79,7 +81,7 @@ Hoje **qualquer membro edita regras e roleta** e o código de convite nunca expi
 
 | Tema | Hoje | Pendência |
 | --- | --- | --- |
-| Multa | Por semana, valor sorteado (mudar exige alterar `close_week`) | |
+| Multa | Por semana, valor sorteado (mudar exige alterar `close_week`); quem deve avisa "Já paguei" e o parceiro confirma | |
 | Exceção | Reduz 1 por dia útil; até 4 por pessoa no mês (regra do grupo); o parceiro pode recusar até 23h59 do dia em que foi marcada | |
 | Treino no domingo | Não conta (configurável por grupo) | |
 | Localização | Até 100 m de uma academia da pessoa; desligável por grupo | Ajustar o raio se o GPS indoor atrapalhar (`gym_radius_m()` no banco e `GYM_RADIUS_M` no app) |
@@ -113,10 +115,12 @@ melhorias-casal.md                   ideias de funções para o casal
 plano-leva-1.md                      plano e resultado da leva 1 (F4, F2, F1)
 plano-leva-2.md                      plano e resultado da leva 2 (F3, F5, F6)
 plano-leva-3.md                      plano e resultado da leva 3 (limite de exceções, F8, F11)
+plano-leva-4.md                      plano e resultado da leva 4 (pagamento, senha, exportar dados)
+pendencias.md                        lista numerada do que ainda falta fazer
 mobile/                              app nativo (Expo); detalhes em mobile/README.md
 src/domain/                          regras puras com teste (usadas pelo app via @domain/)
 supabase/migrations/                 esquema, Storage, agendamento e ajustes (nunca editar as aplicadas)
-supabase/tests/                      testes do banco (01 regras, 02 localização, 03 reações, 04 reports, 05 caixinha com objetivo, 06 prêmios, planos e exceção com resposta, 07 limite de exceções, desafios e fotos de evolução)
+supabase/tests/                      testes do banco (01 regras, 02 localização, 03 reações, 04 reports, 05 caixinha com objetivo, 06 prêmios, planos e exceção com resposta, 07 limite de exceções, desafios e fotos de evolução, 08 confirmação do pagamento)
 scripts/e2e-supabase.mjs             teste de ponta a ponta contra o Supabase real
 ```
 

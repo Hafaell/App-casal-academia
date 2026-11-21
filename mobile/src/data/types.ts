@@ -240,6 +240,8 @@ export interface WeekResult {
   fine_amount: number
   punishment_text: string | null
   paid_at: string | null
+  /** Quem deve avisou "Já paguei" (ainda sem confirmação). Pode faltar antes da migração. */
+  paid_claimed_at?: string | null
   paid_marked_by: string | null
   task_done_at: string | null
 }

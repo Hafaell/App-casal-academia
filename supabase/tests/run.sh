@@ -22,5 +22,5 @@ for f in supabase/migrations/*.sql; do
   run "$f"
 done
 # Os arquivos rodam na mesma sessão: o 02, 03 e 04 usam as pessoas e atalhos criados no 01.
-psql "$URL" -qX -v ON_ERROR_STOP=1 -f supabase/tests/01_rules.sql -f supabase/tests/02_location.sql -f supabase/tests/03_reactions.sql -f supabase/tests/04_reports.sql -f supabase/tests/05_kitty_goals.sql -f supabase/tests/06_couple_features.sql -f supabase/tests/07_limits_challenges_evolution.sql
+psql "$URL" -qX -v ON_ERROR_STOP=1 -f supabase/tests/01_rules.sql -f supabase/tests/02_location.sql -f supabase/tests/03_reactions.sql -f supabase/tests/04_reports.sql -f supabase/tests/05_kitty_goals.sql -f supabase/tests/06_couple_features.sql -f supabase/tests/07_limits_challenges_evolution.sql -f supabase/tests/08_payment_confirmation.sql
 echo "Testes do banco: OK"

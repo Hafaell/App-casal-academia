@@ -27,6 +27,7 @@ export function createFakeSupabase() {
   const uploads: string[] = []
   const removed: string[] = []
   const rpcCalls: { name: string; args: any }[] = []
+  const recoveryCodes = new Map<string, string>()
   /** Tabelas que "ainda não existem" no banco (migração não aplicada). */
   const missingTables = new Set<string>()
 
@@ -213,7 +214,19 @@ export function createFakeSupabase() {
     catch_up_weeks: () => 0,
     set_debt_status: ({ p_week_id, p_user_id, p_paid, p_task_done }) => {
       const r = table('week_results').find((x) => x.week_id === p_week_id && x.user_id === p_user_id)
-      if (p_paid !== null) Object.assign(r, { paid_at: p_paid ? now() : null, paid_marked_by: me() })
+      if (p_paid !== null) {
+        // Mesma regra do banco: quem deve só avisa; outra pessoa confirma.
+        if (p_user_id === me()) {
+          if (r.paid_at) throw new Error('O pagamento já foi confirmado. Só quem recebeu pode desfazer')
+          r.paid_claimed_at = p_paid ? (r.paid_claimed_at ?? now()) : null
+        } else {
+          Object.assign(r, {
+            paid_at: p_paid ? (r.paid_at ?? now()) : null,
+            paid_marked_by: p_paid ? me() : null,
+            paid_claimed_at: p_paid ? (r.paid_claimed_at ?? now()) : null,
+          })
+        }
+      }
       if (p_task_done !== null) r.task_done_at = p_task_done ? now() : null
       return null
     },
@@ -340,6 +353,25 @@ export function createFakeSupabase() {
         session = { user: { id, email } }
         emit('SIGNED_IN')
         return { data: { session }, error: null }
+      },
+      /** Recuperar senha: o "e-mail" guarda o código 123456 para quem tem conta. */
+      resetPasswordForEmail: async (email: string) => {
+        if ([...users.values()].some((x) => x.email === email)) recoveryCodes.set(email, '123456')
+        return { data: {}, error: null }
+      },
+      verifyOtp: async ({ email, token }: { email: string; token: string; type: string }) => {
+        if (recoveryCodes.get(email) !== token) return { data: { session: null }, error: { message: 'Token has expired or is invalid' } }
+        recoveryCodes.delete(email)
+        const u = [...users.values()].find((x) => x.email === email)!
+        session = { user: { id: u.id, email } }
+        emit('SIGNED_IN')
+        return { data: { session }, error: null }
+      },
+      updateUser: async ({ password }: { password: string }) => {
+        const u = users.get(session?.user.id)
+        if (!u) return { data: null, error: { message: 'sem login' } }
+        u.password = password
+        return { data: { user: session.user }, error: null }
       },
       signOut: async () => {
         session = null

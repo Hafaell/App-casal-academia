@@ -59,6 +59,32 @@ describe('entrar e começar', () => {
     expect(fake.db.group_members[0]).toMatchObject({ user_id: 'u9', role: 'owner' })
   })
 
+  it('recupera a senha com o código do e-mail', async () => {
+    const fake = createFakeSupabase()
+    fakeState.supabase = fake
+    fake.addUser('u9', 'Bia', 'bia@teste.com', 'antiga123')
+
+    await open('/')
+    await tap('Esqueci a senha')
+    await type(await screen.findByLabelText('E-mail'), 'bia@teste.com')
+    await press(screen.getByText('Enviar código'))
+    expect(await screen.findByText(/chega um código de 6 números/)).toBeTruthy()
+
+    await type(screen.getByLabelText('Código do e-mail'), '000000')
+    await type(screen.getByLabelText('Senha nova'), 'novaSenha1')
+    await press(screen.getByText('Trocar a senha e entrar'))
+    expect(await screen.findByText('Código inválido ou vencido. Peça um novo.')).toBeTruthy()
+
+    await type(screen.getByLabelText('Código do e-mail'), '123456')
+    await press(screen.getByText('Trocar a senha e entrar'))
+    expect(await screen.findByText('Bem-vindo!')).toBeTruthy()
+
+    // A senha nova passa a valer.
+    await act(() => fake.client.auth.signOut())
+    const res = await fake.client.auth.signInWithPassword({ email: 'bia@teste.com', password: 'novaSenha1' })
+    expect(res.error).toBeNull()
+  })
+
   it('cria conta nova e entra num grupo pelo código', async () => {
     const fake = seedCouple()
     await act(() => fake.client.auth.signOut())
@@ -146,8 +172,8 @@ describe('Caixinha e Histórico', () => {
     const fake = seedCouple()
     await open('/caixinha')
     expect(await screen.findByText('Falta pagar')).toBeTruthy()
-    await press(await screen.findByText('Marcar pago'))
-    expect(await screen.findByText(/Pago 18\/11/)).toBeTruthy()
+    await press(await screen.findByText('Confirmar recebimento'))
+    expect(await screen.findByText(/Recebido 18\/11/)).toBeTruthy()
     expect(fake.db.week_results.find((r) => r.user_id === 'u2')!.paid_at).toBeTruthy()
     expect(screen.getByText('💸 Retirar')).toBeTruthy()
   })
@@ -173,6 +199,27 @@ describe('Treino juntos', () => {
   })
 })
 
+describe('Confirmação do pagamento', () => {
+  it('quem deve só avisa; o parceiro confirma e só então entra na caixinha', async () => {
+    const fake = seedCouple()
+    fake.login('u2', 'Ana')
+    await open('/caixinha')
+    await press(await screen.findByText('Já paguei'))
+    expect(await screen.findByText(/Aguardando confirmação/)).toBeTruthy()
+    const debt = fake.db.week_results.find((r) => r.user_id === 'u2')!
+    expect(debt.paid_claimed_at).toBeTruthy()
+    expect(debt.paid_at).toBeNull()
+
+    fake.login('u1', 'Rafael')
+    await open('/caixinha')
+    expect(await screen.findByText(/Ana avisou que pagou em 18\/11/)).toBeTruthy()
+    await press(screen.getByText('Confirmar recebimento'))
+    expect(await screen.findByText(/Recebido 18\/11/)).toBeTruthy()
+    expect(debt.paid_at).toBeTruthy()
+    expect(debt.paid_marked_by).toBe('u1')
+  })
+})
+
 describe('Caixinha com objetivo', () => {
   it('cria o objetivo, junta o dinheiro e usa', async () => {
     const fake = seedCouple()
@@ -186,7 +233,7 @@ describe('Caixinha com objetivo', () => {
     expect(fake.db.kitty_goals[0]).toMatchObject({ title: 'Jantar japonês', target_amount: 20, created_by: 'u1' })
 
     // A multa de R$ 30 entra na caixinha: o objetivo de R$ 20 fica completo.
-    await press(await screen.findByText('Marcar pago'))
+    await press(await screen.findByText('Confirmar recebimento'))
     expect(await screen.findByText('Chegou lá! 🎉')).toBeTruthy()
     await press(screen.getByText('🎉 Usar o dinheiro'))
     expect(await screen.findByText(/✓ Jantar japonês/)).toBeTruthy()
@@ -204,7 +251,7 @@ describe('Caixinha com objetivo', () => {
     fake.missingTables.add('kitty_goals')
     await open('/caixinha')
     expect(await screen.findByText('Falta pagar')).toBeTruthy()
-    expect(await screen.findByText('Marcar pago')).toBeTruthy()
+    expect(await screen.findByText('Confirmar recebimento')).toBeTruthy()
     expect(screen.queryByText('🎯 Criar objetivo')).toBeNull()
   })
 })
@@ -488,6 +535,26 @@ describe('Fotos de evolução', () => {
     await type(await screen.findByLabelText('Data da foto (DD/MM/AAAA)'), '25/12/2026')
     await press(screen.getByText('Guardar foto'))
     expect((await screen.findAllByText('A data não pode ser no futuro')).length).toBeGreaterThan(0)
+  })
+})
+
+describe('Exportar meus dados', () => {
+  it('monta o arquivo só com os dados da pessoa e abre o compartilhar', async () => {
+    const { shareTextFile } = jest.requireMock('@/lib/shareFile')
+    shareTextFile.mockClear()
+    seedCouple()
+    await open('/mais')
+    await press(await screen.findByText('📦 Exportar meus dados'))
+    await waitFor(() => expect(shareTextFile).toHaveBeenCalledTimes(1))
+    const [name, text, mime] = shareTextFile.mock.calls[0]
+    expect(name).toBe('treino-a-dois-meus-dados.json')
+    expect(mime).toBe('application/json')
+    const data = JSON.parse(text)
+    expect(data.conta).toMatchObject({ id: 'u1', nome: 'Rafael' })
+    expect(data.grupos).toEqual([expect.objectContaining({ id: 'g1', name: 'Nós dois', papel: 'owner' })])
+    // Só os treinos do Rafael (c1 e c2), não o da Ana.
+    expect(data.treinos.map((t: { id: string }) => t.id).sort()).toEqual(['c1', 'c2'])
+    expect(data.semanas).toEqual([expect.objectContaining({ week_start: '2026-11-09', met: true })])
   })
 })
 

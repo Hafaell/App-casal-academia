@@ -2,7 +2,7 @@
 
 App (nativo, para iPhone e Android) para um casal manter a meta de 4 treinos por semana, com check-in por foto, multa sorteada e punição da roleta. O site PWA fica nas branches `develop` e `main`.
 
-**Leia primeiro o [PROGRESSO.md](./PROGRESSO.md).** Ele é a fonte da verdade sobre o estado do projeto, o backlog, as decisões pendentes e os riscos. Ao terminar um trabalho, atualize-o (itens prontos, backlog e a data no topo). O [README.md](./README.md) explica a instalação e as regras de negócio. Para tudo sobre lojas, app nativo (React Native com Expo), custos e segurança comercial, leia o [app-comerciavel.md](./app-comerciavel.md).
+**Leia primeiro o [PROGRESSO.md](./PROGRESSO.md).** O que falta fazer, numerado, está no [pendencias.md](./pendencias.md): ao terminar um item, tire-o de lá. Ele é a fonte da verdade sobre o estado do projeto, o backlog, as decisões pendentes e os riscos. Ao terminar um trabalho, atualize-o (itens prontos, backlog e a data no topo). O [README.md](./README.md) explica a instalação e as regras de negócio. Para tudo sobre lojas, app nativo (React Native com Expo), custos e segurança comercial, leia o [app-comerciavel.md](./app-comerciavel.md).
 
 ## Sobre quem usa este projeto
 
@@ -54,7 +54,7 @@ Esta branch (`react-native`) tem **só o app nativo**. O site (PWA em React + Vi
 ## Regras que não podem ser quebradas
 
 - **O banco é a fonte da verdade do que vale dinheiro** (`close_week` e os gatilhos de check-in, exceção e coringa). O cálculo em `src/domain/rules.ts` serve só para o placar ao vivo e precisa ficar idêntico ao do banco. Mudou uma regra: mude os dois e atualize `supabase/tests/01_rules.sql`.
-- **Nunca edite uma migração já aplicada.** Crie um arquivo novo `AAAAMMDDHHMMSS_descricao.sql`. Todas as migrações atuais já estão aplicadas em produção (a última é `20261121000002_exception_limit_challenges_evolution.sql`, de 21/11/2026).
+- **Nunca edite uma migração já aplicada.** Crie um arquivo novo `AAAAMMDDHHMMSS_descricao.sql`. Todas as migrações atuais já estão aplicadas em produção (a última é `20261121000003_payment_confirmation.sql`, de 21/11/2026).
 - **Datas** são strings `AAAA-MM-DD` no fuso do grupo. Não use o `Date` do aparelho para decidir "hoje"; use `src/domain/dates.ts`.
 - Interface, erros e comentários em português do Brasil. Nomes de código em inglês, menos os termos do domínio (`caixinha`, `coringa`).
 - Commits em português, descrevendo o que muda para o usuário. Branch de trabalho: `react-native`.

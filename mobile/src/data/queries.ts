@@ -820,3 +820,51 @@ export function useDeleteEvolutionPhoto() {
     onSuccess: () => invalidate('evolution'),
   })
 }
+
+// ---------------------------------------------------------------------
+// Exportar meus dados (LGPD): lê tudo o que é da pessoa, em todos os grupos.
+// Tabela que não existir no banco (migração faltando) vira lista vazia.
+// ---------------------------------------------------------------------
+
+export interface MyDataRaw {
+  profile: { id: string; display_name: string } | null
+  email: string | null
+  memberships: Record<string, unknown>[]
+  groups: Record<string, unknown>[]
+  checkins: Record<string, unknown>[]
+  exceptions: Record<string, unknown>[]
+  jokers: Record<string, unknown>[]
+  weekResults: Record<string, unknown>[]
+  plans: Record<string, unknown>[]
+  nudges: Record<string, unknown>[]
+  evolutionPhotos: Record<string, unknown>[]
+  withdrawals: Record<string, unknown>[]
+}
+
+export async function fetchMyData(userId: string): Promise<MyDataRaw> {
+  const rows = async (table: string, column: string, value: string) => {
+    const res = await supabase.from(table).select('*').eq(column, value)
+    return res.error ? [] : ((res.data ?? []) as Record<string, unknown>[])
+  }
+  const { data: auth } = await supabase.auth.getSession()
+  const profiles = await rows('profiles', 'id', userId)
+  const memberships = await rows('group_members', 'user_id', userId)
+  const groupIds = memberships.map((m) => String(m.group_id))
+  const groups = groupIds.length
+    ? (((await supabase.from('groups').select('*').in('id', groupIds)).data ?? []) as Record<string, unknown>[])
+    : []
+  return {
+    profile: (profiles[0] as MyDataRaw['profile']) ?? null,
+    email: auth.session?.user.email ?? null,
+    memberships,
+    groups,
+    checkins: await rows('checkins', 'user_id', userId),
+    exceptions: await rows('exceptions', 'user_id', userId),
+    jokers: await rows('jokers', 'user_id', userId),
+    weekResults: await rows('week_results', 'user_id', userId),
+    plans: await rows('workout_plans', 'user_id', userId),
+    nudges: [...(await rows('nudges', 'from_user', userId)), ...(await rows('nudges', 'to_user', userId))],
+    evolutionPhotos: await rows('evolution_photos', 'user_id', userId),
+    withdrawals: await rows('kitty_withdrawals', 'withdrawn_by', userId),
+  }
+}

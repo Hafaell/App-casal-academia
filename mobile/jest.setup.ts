@@ -78,6 +78,9 @@ jest.mock('react-native-svg', () => {
   return { __esModule: true, default: Stub, Svg: Stub, Path: Stub, Rect: Stub, Circle: Stub }
 })
 
+// Arquivo de exportação: o teste só confere o texto que iria para o compartilhar.
+jest.mock('@/lib/shareFile', () => ({ shareTextFile: jest.fn(async () => true) }))
+
 jest.mock('expo-image-picker', () => {
   const asset = { uri: 'file:///galeria.jpg', base64: '/9j/', width: 1080, height: 1440 }
   return {

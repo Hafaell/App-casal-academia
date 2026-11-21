@@ -272,11 +272,19 @@ function WithdrawalRow({ withdrawal, myId, fromGoal }: { withdrawal: KittyWithdr
 // ---------------------------------------------------------------------
 
 function DebtCard({ debt }: { debt: WeekResult }) {
-  const { group, nameOf } = useGroup()
+  const { group, nameOf, userId } = useGroup()
   const setStatus = useSetDebtStatus()
   const toast = useToast()
   const run = (patch: { paid?: boolean; taskDone?: boolean }) =>
     setStatus.mutate({ weekId: debt.week_id, userId: debt.user_id, ...patch }, { onError: (err) => toast(errorMessage(err), 'error') })
+  const mine = debt.user_id === userId
+  const day = (iso: string) => dayMonth(localDate(iso, group.timezone))
+
+  // Pagamento: quem deve avisa "Já paguei"; outra pessoa confirma o recebimento (só aí entra na caixinha).
+  let payLabel: string
+  if (debt.paid_at) payLabel = mine ? `Pago (confirmado ${day(debt.paid_at)})` : `Recebido ${day(debt.paid_at)}`
+  else if (mine) payLabel = debt.paid_claimed_at ? 'Aguardando confirmação' : 'Já paguei'
+  else payLabel = 'Confirmar recebimento'
 
   return (
     <Card>
@@ -297,12 +305,21 @@ function DebtCard({ debt }: { debt: WeekResult }) {
         </Txt>
       )}
 
+      {!debt.paid_at && debt.paid_claimed_at && (
+        <Txt size={12} color={colors.warn} style={{ marginTop: 8 }}>
+          {mine
+            ? `Você avisou que pagou em ${day(debt.paid_claimed_at)}. Falta o parceiro confirmar.`
+            : `${nameOf(debt.user_id)} avisou que pagou em ${day(debt.paid_claimed_at)}. Confira e confirme.`}
+        </Txt>
+      )}
+
       <View style={{ marginTop: 12, flexDirection: 'row', gap: 8 }}>
         <Toggle
-          on={Boolean(debt.paid_at)}
-          label={debt.paid_at ? `Pago ${dayMonth(localDate(debt.paid_at, group.timezone))}` : 'Marcar pago'}
-          onPress={() => run({ paid: !debt.paid_at })}
-          disabled={setStatus.isPending}
+          on={Boolean(debt.paid_at) || (mine && Boolean(debt.paid_claimed_at))}
+          label={payLabel}
+          // Quem deve não desfaz uma confirmação; o banco também recusa.
+          onPress={() => (mine ? run({ paid: !debt.paid_claimed_at }) : run({ paid: !debt.paid_at }))}
+          disabled={setStatus.isPending || (mine && Boolean(debt.paid_at))}
         />
         {debt.punishment_text ? (
           <Toggle

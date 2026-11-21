@@ -1,9 +1,13 @@
+import { useState } from 'react'
 import { Pressable, View } from 'react-native'
 import { router, type Href } from 'expo-router'
 import { useGroup } from '@/providers/GroupProvider'
-import { PageHeader, Screen, Txt } from '@/components/ui'
+import { Button, PageHeader, Screen, Txt, useToast } from '@/components/ui'
+import { fetchMyData } from '@/data/queries'
+import { buildDataExport } from '@/lib/dataExport'
+import { shareTextFile } from '@/lib/shareFile'
 import { GYM_RADIUS_M } from '@domain/geo'
-import { supabase } from '@/lib/supabase'
+import { errorMessage, supabase } from '@/lib/supabase'
 import { colors } from '@/lib/theme'
 
 const items: { to: Href; icon: string; title: string; desc: string }[] = [
@@ -21,7 +25,22 @@ const items: { to: Href; icon: string; title: string; desc: string }[] = [
 ]
 
 export function MoreScreen() {
-  const { group } = useGroup()
+  const { group, userId } = useGroup()
+  const toast = useToast()
+  const [exporting, setExporting] = useState(false)
+
+  async function exportData() {
+    setExporting(true)
+    try {
+      const data = buildDataExport(await fetchMyData(userId), new Date().toISOString())
+      const ok = await shareTextFile(`treino-a-dois-meus-dados.json`, JSON.stringify(data, null, 2), 'application/json', 'Meus dados')
+      if (!ok) toast('Este aparelho não consegue compartilhar arquivos', 'error')
+    } catch (err) {
+      toast(errorMessage(err), 'error')
+    } finally {
+      setExporting(false)
+    }
+  }
   return (
     <Screen header={<PageHeader title="Mais" subtitle={group.name} />}>
       <View style={{ gap: 8 }}>
@@ -51,6 +70,12 @@ export function MoreScreen() {
             <Txt muted>›</Txt>
           </Pressable>
         ))}
+        <Button variant="secondary" style={{ marginTop: 16 }} onPress={exportData} loading={exporting}>
+          📦 Exportar meus dados
+        </Button>
+        <Txt size={12} muted center>
+          Um arquivo com tudo o que é seu no app (treinos, exceções, multas, planos). Fotos vão só pelo nome.
+        </Txt>
         <Pressable onPress={() => supabase.auth.signOut()} style={{ paddingVertical: 12, marginTop: 16 }} accessibilityRole="button">
           <Txt size={14} muted center>
             Sair da conta
