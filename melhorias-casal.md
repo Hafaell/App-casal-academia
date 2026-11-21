@@ -1,6 +1,6 @@
 # Melhorias para o casal: o que construir e quando
 
-Criado em 19/11/2026. Este arquivo reúne as ideias para tornar o app mais valioso para casais (e, por consequência, mais fácil de vender). **Leva 1 pronta em 20/11/2026: F4, F2 e F1 (sem o vídeo)**, ver [plano-leva-1.md](./plano-leva-1.md). **Leva 2 pronta em 21/11/2026: F3, F5 e F6**, ver [plano-leva-2.md](./plano-leva-2.md). A ideia é decidir, item por item, o que entra agora e o que fica para depois.
+Criado em 19/11/2026. Este arquivo reúne as ideias para tornar o app mais valioso para casais (e, por consequência, mais fácil de vender). **Leva 1 pronta em 20/11/2026: F4, F2 e F1 (sem o vídeo)**, ver [plano-leva-1.md](./plano-leva-1.md). **Leva 2 pronta em 21/11/2026: F3, F5 e F6**, ver [plano-leva-2.md](./plano-leva-2.md). **Leva 3 pronta em 21/11/2026: F8 e F11** (mais o limite mensal de exceções), ver [plano-leva-3.md](./plano-leva-3.md). F7 e F9 foram descartadas. A ideia é decidir, item por item, o que entra agora e o que fica para depois.
 
 Ele é separado do [MELHORIAS.md](./MELHORIAS.md), que guarda as melhorias técnicas anteriores, e complementa o [app-comerciavel.md](./app-comerciavel.md) (lojas, custos, segurança) e o [PROGRESSO.md](./PROGRESSO.md) (estado do projeto).
 
@@ -95,14 +95,14 @@ Cada item tem uma caixa de decisão. Marque **Agora**, **Depois** ou **Não**.
 - **Valor:** alto como diferencial, mas é a função mais pesada.
 - **Esforço:** **G**.
 - **Só no app nativo.** Mexe em dado de saúde, que a LGPD trata como sensível **[Certa]**, e exige consentimento claro e declaração nos formulários das lojas.
-- **Decisão:** [ ] Agora [ ] Depois [ ] Não
+- **Decisão:** [x] Não (descartada pelo Rafael em 21/11/2026)
 
 ### F8. Desafios do mês
 
 - **O que é:** meses temáticos ("mês do cardio", meta mais alta, prêmio extra).
 - **Valor:** médio. Ajuda a variar e a manter o interesse.
 - **Esforço:** **G**. Meta diferente por mês mexe na regra de dinheiro.
-- **Decisão:** [ ] Agora [ ] Depois [ ] Não
+- **Decisão:** [x] Agora (**feito**: um por mês, somando os dois; não mexe em multa; cumprido dá um giro de prêmio)
 
 ### F9. Aposta entre os dois
 
@@ -110,7 +110,7 @@ Cada item tem uma caixa de decisão. Marque **Agora**, **Depois** ou **Não**.
 - **Valor:** médio.
 - **Esforço:** **G**.
 - **Cuidado:** use a palavra "desafio", não "aposta". A Apple e o Google têm regras rígidas sobre jogos de azar, e o app já tem uma roleta. Evite visual de cassino.
-- **Decisão:** [ ] Agora [ ] Depois [ ] Não
+- **Decisão:** [x] Não (descartada pelo Rafael em 21/11/2026)
 
 ### F10. Parcerias (academias, restaurantes, suplementos)
 
@@ -125,7 +125,7 @@ Cada item tem uma caixa de decisão. Marque **Agora**, **Depois** ou **Não**.
 - **Valor:** costuma vender bem, mas é dado sensível e pode ultrapassar o que a Apple aceita se não houver cuidado.
 - **Esforço:** **M**.
 - **Só com consentimento claro e em área privada**, nunca no feed.
-- **Decisão:** [ ] Agora [ ] Depois [ ] Não
+- **Decisão:** [x] Agora (**feito**: privadas, o parceiro só vê o que a pessoa escolher mostrar)
 
 ---
 

@@ -7,7 +7,7 @@ import { useGroup } from '@/providers/GroupProvider'
 import { Avatar, Button, Card, Spinner, Txt, memberColor } from '@/components/ui'
 import { useCheckins, useGyms, useWeekResults, useWeeks } from '@/data/queries'
 import { useWeekBoard, type MemberWeek } from '@/data/useWeekBoard'
-import { HomeAlerts, TodayPlanCard } from '@/components/HomeExtras'
+import { ChallengeHomeCard, HomeAlerts, TodayPlanCard } from '@/components/HomeExtras'
 import type { Week, WeekResult } from '@/data/types'
 import { addDays, dayMonth, firstOfMonth, isoDow, monthKey, monthName, weekRange, weekdayShort } from '@domain/dates'
 import { formatMoney } from '@domain/rules'
@@ -151,6 +151,8 @@ export function HomeScreen() {
         )}
 
         <TodayPlanCard />
+
+        <ChallengeHomeCard />
 
         <Pressable onPress={() => router.push('/sequencia')} accessibilityRole="link">
           <Card style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>

@@ -8,8 +8,9 @@ import { router } from 'expo-router'
 import { useGroup } from '@/providers/GroupProvider'
 import { Button, Card, Txt } from '@/components/ui'
 import { ExceptionReviewBar, useOpenReviews } from '@/components/ExceptionReview'
-import { useExceptions, useMyNudges, usePlans, useSeeNudges } from '@/data/queries'
-import { addDays, dayMonth, localTime, weekdayShort } from '@domain/dates'
+import { useChallenges, useCheckins, useExceptions, useMyNudges, usePlans, useSeeNudges } from '@/data/queries'
+import { addDays, dayMonth, firstOfMonth, localTime, weekdayShort } from '@domain/dates'
+import { challengeProgress } from '@domain/challenges'
 import { EXCEPTION_REASONS } from '@domain/rules'
 import { usePendingRewards } from '@/screens/RewardsScreen'
 import { NudgeButton, planText } from '@/screens/PlanScreen'
@@ -129,5 +130,31 @@ export function TodayPlanCard() {
       ))}
       <NudgeButton style={{ marginTop: 12 }} />
     </Card>
+  )
+}
+
+/** Progresso do desafio do mês, quando existe um. */
+export function ChallengeHomeCard() {
+  const { group, today } = useGroup()
+  const month = firstOfMonth(today)
+  const challenges = useChallenges(group.id)
+  const checkins = useCheckins(group.id, month, today)
+  const ch = (challenges.data ?? []).find((c) => c.month === month)
+  if (!ch) return null
+  const p = challengeProgress(ch, checkins.data ?? [])
+  return (
+    <Pressable onPress={() => router.push('/desafio')} accessibilityRole="link">
+      <Card style={p.complete ? { borderColor: alpha(colors.ok, 0.4) } : undefined}>
+        <Txt size={14} muted>
+          Desafio do mês
+        </Txt>
+        <Txt size={16} weight="600">
+          🏆 {ch.title}: {p.done}/{p.target} {p.complete ? '· cumprido! 🎉' : ''}
+        </Txt>
+        <View style={{ marginTop: 8, height: 6, borderRadius: 3, overflow: 'hidden', backgroundColor: colors.surface2 }}>
+          <View style={{ height: '100%', width: `${Math.min(100, (p.done / p.target) * 100)}%`, backgroundColor: p.complete ? colors.ok : colors.accent }} />
+        </View>
+      </Card>
+    </Pressable>
   )
 }

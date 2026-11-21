@@ -130,3 +130,18 @@ export function weekRange(monday: ISODate): string {
 export function firstMondayFrom(d: ISODate): ISODate {
   return isoDow(d) === 1 ? d : addDays(mondayOf(d), 7)
 }
+
+/** "21/11/2026" → "2026-11-21". Devolve null se a data não existir. */
+export function parseBrDate(text: string): ISODate | null {
+  const m = text.trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/)
+  if (!m) return null
+  const iso = `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`
+  const [y, mo, d] = iso.split('-').map(Number)
+  const date = new Date(Date.UTC(y, mo - 1, d))
+  return date.getUTCFullYear() === y && date.getUTCMonth() === mo - 1 && date.getUTCDate() === d ? iso : null
+}
+
+/** "2026-11-21" → "21/11/2026" */
+export function formatBrDate(d: ISODate): string {
+  return `${d.slice(8, 10)}/${d.slice(5, 7)}/${d.slice(0, 4)}`
+}

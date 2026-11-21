@@ -28,6 +28,7 @@ export function seedCouple() {
       timezone: 'America/Sao_Paulo',
       starts_on: '2026-11-02',
       require_location: true,
+      exceptions_per_month: 4,
     },
   ]
   db.group_members = [
@@ -63,6 +64,8 @@ export function seedCouple() {
   db.workout_plans = []
   db.nudges = []
   db.reward_spins = []
+  db.monthly_challenges = []
+  db.evolution_photos = []
   db.rewards = [
     { id: 'r1', group_id: 'g1', description: 'Massagem de 20 minutos', active: true, created_at: '2026-11-01T10:00:00Z' },
     { id: 'r2', group_id: 'g1', description: 'Café da manhã na cama', active: false, created_at: '2026-11-01T10:01:00Z' },

@@ -2,7 +2,7 @@
 
 Ponto de partida de toda sessão. Instruções para o Claude Code ficam no [CLAUDE.md](./CLAUDE.md); instalação e regras de negócio no [README.md](./README.md).
 
-Última atualização: 21/11/2026 (leva 2 de funções do casal) · Branch de trabalho: `react-native` (só app nativo; o site PWA vive em `develop`/`main`) · Versão do app: 0.1.0
+Última atualização: 21/11/2026 (leva 3 de funções do casal) · Branch de trabalho: `react-native` (só app nativo; o site PWA vive em `develop`/`main`) · Versão do app: 0.1.0
 
 Legenda de confiança: **[Certa]**, **[Provável]**, **[Adivinhando]**.
 
@@ -29,11 +29,12 @@ App para o casal (Rafael e a namorada) manter a academia.
 - `mobile/.env.local` já está preenchido com a URL e a chave anon (fora do git).
 - **Leva 1 de funções para o casal pronta em 20/11/2026** ([plano-leva-1.md](./plano-leva-1.md)): treino juntos (selo no feed e contagem no Início), caixinha com objetivo, a tela "Nossa história" (relatório do mês) e a tela "Stories e colagens" (stories de treinos juntos e do mês, e colagem do ano, com compartilhar de um toque). A chave Pix foi feita e retirada a pedido. Migração `20261120000001_kitty_goals.sql` aplicada em 21/11/2026.
 - **Leva 2 pronta em 21/11/2026** ([plano-leva-2.md](./plano-leva-2.md)): roleta de prêmios (um giro a cada 2 semanas seguidas), planejar a semana com o "vamos?" (aviso dentro do app) e exceção com resposta do parceiro (pode recusar até 23h59 do dia em que foi marcada). Migração `20261121000001_rewards_plans_exception_review.sql` aplicada em 21/11/2026.
+- **Leva 3 pronta em 21/11/2026** ([plano-leva-3.md](./plano-leva-3.md)): limite de 4 exceções por pessoa por mês (muda nas regras), desafio do mês (giro extra de prêmio) e fotos de evolução privadas. Migração `20261121000002_exception_limit_challenges_evolution.sql` aplicada em 21/11/2026 (conferido no SQL Editor: coluna, tabelas, bucket `evolution`, políticas e funções existem).
 
 ### Não verificado ainda
 
 - Migrações `20261120000001_kitty_goals.sql` e `20261121000001_rewards_plans_exception_review.sql` **aplicadas em 21/11/2026** (pelo SQL Editor, com "Success"; as tabelas novas respondem na API). Ainda falta **usar** as telas novas no celular para conferir.
-- Testes do banco (01 a 06) **rodaram e passaram em 21/11/2026** num Postgres portátil local, com um leitor em Node no lugar do `psql` (feito numa pasta temporária, fora do projeto). `npm run test:db` continua precisando de `psql`.
+- Testes do banco (01 a 07) **rodaram e passaram em 21/11/2026** num Postgres portátil local, com um leitor em Node no lugar do `psql` (feito numa pasta temporária, fora do projeto). `npm run test:db` continua precisando de `psql`.
 - Compartilhar imagem (stories, colagem, semana) ainda não conferido no iPhone depois da troca para um toque só.
 
 - Câmera e GPS dentro da academia, num uso real do dia a dia (precisão do GPS em ambiente fechado).
@@ -59,7 +60,8 @@ App para o casal (Rafael e a namorada) manter a academia.
 - [ ] **Notificações push** (lembrete de treino, aviso de fechamento com punição). Hoje ninguém é avisado sozinho.
 - [x] Leva 1 das funções do casal: F4 treino juntos, F2 caixinha com objetivo, F1 relatório do mês, stories e colagem do ano ([plano-leva-1.md](./plano-leva-1.md)). O vídeo do ano ficou para depois.
 - [x] Leva 2: F3 roleta de prêmios, F5 planejar a semana e "vamos?", F6 exceção com resposta do parceiro ([plano-leva-2.md](./plano-leva-2.md)).
-- [ ] Próximas funções do casal: [melhorias-casal.md](./melhorias-casal.md) (sobram F7 a F11).
+- [x] Leva 3: limite mensal de exceções, F8 desafio do mês, F11 fotos de evolução ([plano-leva-3.md](./plano-leva-3.md)).
+- Fora da lista por decisão do Rafael (21/11/2026): F7 treino automático pelo relógio e F9 desafio entre os dois. Sobra F10 (parcerias), que é trabalho de negócio.
 
 ### Prioridade 3: qualidade
 
@@ -78,7 +80,7 @@ Hoje **qualquer membro edita regras e roleta** e o código de convite nunca expi
 | Tema | Hoje | Pendência |
 | --- | --- | --- |
 | Multa | Por semana, valor sorteado (mudar exige alterar `close_week`) | |
-| Exceção | Reduz 1 por dia útil, sem limite mensal; o parceiro pode recusar até 23h59 do dia em que foi marcada | |
+| Exceção | Reduz 1 por dia útil; até 4 por pessoa no mês (regra do grupo); o parceiro pode recusar até 23h59 do dia em que foi marcada | |
 | Treino no domingo | Não conta (configurável por grupo) | |
 | Localização | Até 100 m de uma academia da pessoa; desligável por grupo | Ajustar o raio se o GPS indoor atrapalhar (`gym_radius_m()` no banco e `GYM_RADIUS_M` no app) |
 | Recompensa quando os dois batem a meta | Roleta de prêmios: um giro a cada 2 semanas seguidas | Mudar o intervalo exige `reward_every_weeks()` no banco e `REWARD_EVERY_WEEKS` em `src/domain/rewards.ts` |
@@ -110,14 +112,15 @@ app-comerciavel.md                   plano de lojas, custos e segurança comerci
 melhorias-casal.md                   ideias de funções para o casal
 plano-leva-1.md                      plano e resultado da leva 1 (F4, F2, F1)
 plano-leva-2.md                      plano e resultado da leva 2 (F3, F5, F6)
+plano-leva-3.md                      plano e resultado da leva 3 (limite de exceções, F8, F11)
 mobile/                              app nativo (Expo); detalhes em mobile/README.md
 src/domain/                          regras puras com teste (usadas pelo app via @domain/)
 supabase/migrations/                 esquema, Storage, agendamento e ajustes (nunca editar as aplicadas)
-supabase/tests/                      testes do banco (01 regras, 02 localização, 03 reações, 04 reports, 05 caixinha com objetivo, 06 prêmios, planos e exceção com resposta)
+supabase/tests/                      testes do banco (01 regras, 02 localização, 03 reações, 04 reports, 05 caixinha com objetivo, 06 prêmios, planos e exceção com resposta, 07 limite de exceções, desafios e fotos de evolução)
 scripts/e2e-supabase.mjs             teste de ponta a ponta contra o Supabase real
 ```
 
-Tabelas: `profiles`, `groups`, `group_members`, `gyms`, `punishments`, `checkins`, `exceptions`, `jokers`, `weeks`, `week_results`, `reactions`, `checkin_reports`, `kitty_withdrawals`, `kitty_goals`, `exception_rejections`, `rewards`, `reward_spins`, `workout_plans`, `nudges`. Funções principais: `create_group`, `join_group`, `leave_group`, `close_week`, `close_due_weeks`, `catch_up_weeks`, `set_debt_status`, `report_checkin`, `complete_kitty_goal`, `review_exception`, `spin_reward`.
+Tabelas: `profiles`, `groups`, `group_members`, `gyms`, `punishments`, `checkins`, `exceptions`, `jokers`, `weeks`, `week_results`, `reactions`, `checkin_reports`, `kitty_withdrawals`, `kitty_goals`, `exception_rejections`, `rewards`, `reward_spins`, `workout_plans`, `nudges`, `monthly_challenges`, `evolution_photos`. Buckets: `checkins` e `evolution` (privados). Funções principais: `create_group`, `join_group`, `leave_group`, `close_week`, `close_due_weeks`, `catch_up_weeks`, `set_debt_status`, `report_checkin`, `complete_kitty_goal`, `review_exception`, `spin_reward`, `challenge_progress`, `spin_challenge_reward`.
 
 ---
 

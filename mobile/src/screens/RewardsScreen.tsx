@@ -1,30 +1,62 @@
 /**
  * Roleta de prêmios: a cada 2 semanas seguidas em que os dois batem a meta, o casal ganha um giro.
+ * Cada desafio do mês cumprido dá mais um giro (public.spin_challenge_reward).
  * O banco confere o marco e sorteia (public.spin_reward); aqui mostra, gira e guarda o histórico.
  */
 import { useMemo, useState } from 'react'
 import { Pressable, View } from 'react-native'
 import { useGroup } from '@/providers/GroupProvider'
 import { Button, Card, EmptyState, Field, Input, PageHeader, Screen, Sheet, Spinner, Txt, confirmAsync, useToast } from '@/components/ui'
-import { useDeleteReward, useRedeemReward, useRewardSpins, useRewards, useSaveReward, useSpinReward, useWeekResults } from '@/data/queries'
-import type { Reward, RewardSpin } from '@/data/types'
-import { weekRange } from '@domain/dates'
+import {
+  useChallenges,
+  useCheckins,
+  useDeleteReward,
+  useRedeemReward,
+  useRewardSpins,
+  useRewards,
+  useSaveReward,
+  useSpinChallengeReward,
+  useSpinReward,
+  useWeekResults,
+} from '@/data/queries'
+import type { MonthlyChallenge, Reward, RewardSpin } from '@/data/types'
+import { firstOfMonth, weekRange } from '@domain/dates'
+import { challengeProgress } from '@domain/challenges'
 import { REWARD_EVERY_WEEKS, rewardMilestones, weeksToNextReward } from '@domain/rewards'
 import { groupStreak, type WeekOutcome } from '@domain/streak'
 import { errorMessage } from '@/lib/supabase'
 import { alpha, colors } from '@/lib/theme'
 
-/** Marcos ainda sem giro (o mais antigo primeiro). Usado também pelo aviso do Início. */
-export function usePendingRewards(): { pending: string[]; ready: boolean } {
-  const { group } = useGroup()
+/** Um giro ainda não usado: de 2 semanas seguidas ou de um desafio do mês cumprido. */
+export type PendingSpin = { type: 'week'; week: string } | { type: 'challenge'; challenge: MonthlyChallenge }
+
+/** Giros ainda não usados (o mais antigo primeiro). Usado também pelo aviso do Início. */
+export function usePendingRewards(): { pending: PendingSpin[]; ready: boolean } {
+  const { group, today } = useGroup()
   const results = useWeekResults(group.id)
   const spins = useRewardSpins(group.id)
+  const challenges = useChallenges(group.id)
+  const oldest = (challenges.data ?? []).reduce((m, c) => (c.month < m ? c.month : m), firstOfMonth(today))
+  const checkins = useCheckins(group.id, oldest, today)
   const pending = useMemo(() => {
     const outcomes: WeekOutcome[] = (results.data ?? []).map((r) => ({ weekStart: r.week_start, userId: r.user_id, met: r.met, usedJoker: r.used_joker }))
-    const done = new Set((spins.data ?? []).map((s) => s.week_start))
-    return rewardMilestones(outcomes).filter((w) => !done.has(w))
-  }, [results.data, spins.data])
+    const doneWeeks = new Set((spins.data ?? []).map((s) => s.week_start))
+    const doneChallenges = new Set((spins.data ?? []).map((s) => s.challenge_id))
+    const weeks: PendingSpin[] = rewardMilestones(outcomes)
+      .filter((w) => !doneWeeks.has(w))
+      .map((week) => ({ type: 'week', week }))
+    const fromChallenges: PendingSpin[] = (challenges.data ?? [])
+      .filter((c) => !doneChallenges.has(c.id) && challengeProgress(c, checkins.data ?? []).complete)
+      .map((challenge) => ({ type: 'challenge', challenge }))
+    return [...weeks, ...fromChallenges]
+  }, [results.data, spins.data, challenges.data, checkins.data])
   return { pending, ready: results.isSuccess && spins.isSuccess }
+}
+
+function pendingText(p: PendingSpin): string {
+  return p.type === 'week'
+    ? `${REWARD_EVERY_WEEKS} semanas seguidas de meta batida até ${weekRange(p.week)}`
+    : `Desafio cumprido: ${p.challenge.title}`
 }
 
 export function RewardsScreen() {
@@ -33,6 +65,7 @@ export function RewardsScreen() {
   const rewards = useRewards(group.id)
   const spins = useRewardSpins(group.id)
   const spin = useSpinReward(group.id)
+  const spinChallenge = useSpinChallengeReward()
   const { pending, ready } = usePendingRewards()
   const toast = useToast()
   const [won, setWon] = useState<RewardSpin | null>(null)
@@ -46,14 +79,14 @@ export function RewardsScreen() {
   const couple = members.length === 2 ? 'os dois' : 'todo mundo'
 
   function spinNow() {
-    const week = pending[0]
-    if (!week) return
+    const next = pending[0]
+    if (!next) return
     setWon(null)
-    spin.mutate(week, {
-      onSuccess: (s) => setWon(s),
-      onError: (err) => toast(errorMessage(err), 'error'),
-    })
+    const handlers = { onSuccess: (s: RewardSpin) => setWon(s), onError: (err: unknown) => toast(errorMessage(err), 'error') }
+    if (next.type === 'week') spin.mutate(next.week, handlers)
+    else spinChallenge.mutate(next.challenge.id, handlers)
   }
+  const spinning = spin.isPending || spinChallenge.isPending
 
   // Antes da atualização do banco, as tabelas da roleta de prêmios não existem.
   if (rewards.isError || spins.isError) {
@@ -101,10 +134,10 @@ export function RewardsScreen() {
                   {pending.length === 1 ? 'Vocês ganharam um giro!' : `Vocês têm ${pending.length} giros!`}
                 </Txt>
                 <Txt size={12} muted center>
-                  {REWARD_EVERY_WEEKS} semanas seguidas de meta batida até {weekRange(pending[0])}
+                  {pendingText(pending[0])}
                 </Txt>
-                <Button style={{ marginTop: 12, alignSelf: 'stretch' }} onPress={spinNow} loading={spin.isPending} disabled={activeCount === 0}>
-                  {spin.isPending ? 'Girando…' : '🎰 Girar a roleta'}
+                <Button style={{ marginTop: 12, alignSelf: 'stretch' }} onPress={spinNow} loading={spinning} disabled={activeCount === 0}>
+                  {spinning ? 'Girando…' : '🎰 Girar a roleta'}
                 </Button>
                 {activeCount === 0 && (
                   <Txt size={12} color={colors.warn} center style={{ marginTop: 4 }}>
@@ -167,7 +200,7 @@ function SpinRow({ spin }: { spin: RewardSpin }) {
           🎁 {spin.reward_text}
         </Txt>
         <Txt size={12} muted>
-          Semana {weekRange(spin.week_start)}
+          {spin.week_start ? `Semana ${weekRange(spin.week_start)}` : 'Desafio do mês cumprido'}
         </Txt>
       </View>
       <Pressable

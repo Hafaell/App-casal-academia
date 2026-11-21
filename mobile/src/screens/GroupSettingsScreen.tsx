@@ -28,6 +28,7 @@ export function GroupSettingsScreen() {
     sunday_counts: group.sunday_counts,
     jokers_per_month: group.jokers_per_month,
     require_location: group.require_location,
+    exceptions_per_month: group.exceptions_per_month,
   })
   const [myName, setMyName] = useState(me?.display_name ?? '')
   const [code, setCode] = useState('')
@@ -41,8 +42,12 @@ export function GroupSettingsScreen() {
     const maxGoal = form.sunday_counts ? 7 : 6
     if (form.weekly_goal < 1 || form.weekly_goal > maxGoal) return toast(`A meta precisa ser de 1 a ${maxGoal} treinos`, 'error')
     if (form.jokers_per_month > 4) return toast('No máximo 4 coringas por mês', 'error')
+    if (form.exceptions_per_month !== undefined && (form.exceptions_per_month < 1 || form.exceptions_per_month > 20))
+      return toast('O limite de exceções precisa ser de 1 a 20 por mês', 'error')
     if (form.fine_max < form.fine_min) return toast('A multa máxima precisa ser maior que a mínima', 'error')
-    update.mutate(form, { onSuccess: () => toast('Regras salvas'), onError: fail })
+    // Antes da migração da leva 3 a coluna não existe: aí ela não vai no pedido.
+    const { exceptions_per_month, ...rest } = form
+    update.mutate(exceptions_per_month === undefined ? rest : form, { onSuccess: () => toast('Regras salvas'), onError: fail })
   }
 
   async function share() {
@@ -145,6 +150,15 @@ export function GroupSettingsScreen() {
             onChangeText={(v) => setForm({ ...form, jokers_per_month: num(v) })}
           />
         </Field>
+        {form.exceptions_per_month !== undefined && (
+          <Field label="Exceções por pessoa no mês" hint="Doença, viagem, lesão: cada pessoa marca no máximo isso por mês.">
+            <Input
+              keyboardType="number-pad"
+              value={String(form.exceptions_per_month)}
+              onChangeText={(v) => setForm({ ...form, exceptions_per_month: num(v) })}
+            />
+          </Field>
+        )}
         <SwitchRow
           label="Treino no domingo conta"
           hint="Desligado: domingo é folga e o check-in fica bloqueado."

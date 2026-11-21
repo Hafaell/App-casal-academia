@@ -39,6 +39,13 @@
         }
       ],
       [
+        "expo-image-picker",
+        {
+          "photosPermission": "A galeria é usada só para você escolher fotos de evolução. Elas ficam privadas.",
+          "cameraPermission": "A câmera tira a foto do treino e as fotos de evolução."
+        }
+      ],
+      [
         "expo-location",
         {
           "locationWhenInUsePermission": "A localização confere se você está na academia quando registra o treino."

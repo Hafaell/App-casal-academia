@@ -13,6 +13,8 @@ const items: { to: Href; icon: string; title: string; desc: string }[] = [
   { to: '/compartilhar', icon: '📤', title: 'Stories e colagens', desc: 'Imagens para compartilhar: treinamos juntos, o mês e o ano' },
   { to: '/planejar', icon: '🗓️', title: 'Planejar a semana', desc: 'Dias em que cada um vai treinar e o "vamos?"' },
   { to: '/premios', icon: '🎁', title: 'Roleta de prêmios', desc: 'Um giro a cada 2 semanas seguidas de meta batida' },
+  { to: '/desafio', icon: '🏆', title: 'Desafio do mês', desc: 'Um objetivo do casal no mês; cumprido, vale um giro de prêmio' },
+  { to: '/evolucao', icon: '📷', title: 'Fotos de evolução', desc: 'Antes e depois, privado: só você vê' },
   { to: '/sequencia', icon: '🔥', title: 'Sequência', desc: 'Semanas seguidas batendo a meta' },
   { to: '/roleta', icon: '🎡', title: 'Roleta de punições', desc: 'Adicionar, editar ou remover punições' },
   { to: '/grupo', icon: '⚙️', title: 'Grupo e regras', desc: 'Meta, multa, convite e seu nome' },

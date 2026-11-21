@@ -3,7 +3,8 @@ import { Pressable, View } from 'react-native'
 import { useGroup } from '@/providers/GroupProvider'
 import { Button, Card, Chip, Field, Input, PageHeader, Screen, Spinner, Txt, confirmAsync, useToast } from '@/components/ui'
 import { useAddException, useCheckins, useExceptions, useJokers, useRemoveException, useRemoveJoker, useUseJoker } from '@/data/queries'
-import { addDays, dayMonth, monthKey, monthLabel, weekRange, weekdayShort } from '@domain/dates'
+import { addDays, addMonths, dayMonth, firstOfMonth, monthKey, monthLabel, monthName, weekRange, weekdayShort } from '@domain/dates'
+import { DEFAULT_EXCEPTIONS_PER_MONTH, exceptionsLeft } from '@domain/exceptionLimit'
 import { EXCEPTION_REASONS, type ExceptionReason } from '@domain/rules'
 import { ExceptionReviewBar } from '@/components/ExceptionReview'
 import { errorMessage } from '@/lib/supabase'
@@ -13,6 +14,11 @@ export function ExceptionsScreen() {
   const { group, userId, monday, nameOf } = useGroup()
   const until = addDays(monday, 13)
   const exceptions = useExceptions(group.id, monday, until)
+  // Meses inteiros que as opções de dia alcançam, para contar o limite mensal.
+  const monthsFrom = firstOfMonth(monday)
+  const monthsTo = addDays(addMonths(firstOfMonth(until), 1), -1)
+  const monthExceptions = useExceptions(group.id, monthsFrom, monthsTo)
+  const limit = group.exceptions_per_month ?? DEFAULT_EXCEPTIONS_PER_MONTH
   const checkins = useCheckins(group.id, monday, until)
   const jokers = useJokers(group.id)
   const add = useAddException(group.id)
@@ -36,6 +42,8 @@ export function ExceptionsScreen() {
   const thisWeekJoker = myJokers.find((j) => j.week_start === monday)
   const usedThisMonth = myJokers.filter((j) => monthKey(j.week_start) === monthKey(monday))
   const jokerLeft = group.jokers_per_month - usedThisMonth.length
+
+  const leftFor = (d: string) => exceptionsLeft(monthExceptions.data ?? [], userId, d, limit)
 
   function submit() {
     if (!day || !reason) return
@@ -175,7 +183,15 @@ export function ExceptionsScreen() {
           <Input value={note} onChangeText={setNote} maxLength={200} />
         </Field>
 
-        <Button disabled={!day || !reason} loading={add.isPending} onPress={submit}>
+        {day && (
+          <Txt size={12} color={leftFor(day) === 0 ? colors.danger : colors.muted}>
+            {leftFor(day) === 0
+              ? `Você já usou ${limit === 1 ? 'a única exceção' : `as ${limit} exceções`} de ${monthName(day)}.`
+              : `Restam ${leftFor(day)} de ${limit} exceções em ${monthName(day)}.`}
+          </Txt>
+        )}
+
+        <Button disabled={!day || !reason || leftFor(day) === 0} loading={add.isPending} onPress={submit}>
           Marcar exceção
         </Button>
       </Card>

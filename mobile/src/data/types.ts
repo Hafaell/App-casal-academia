@@ -1,5 +1,6 @@
 import type { CheckinKind } from '@domain/reactions'
 import type { ExceptionReason } from '@domain/rules'
+import type { ChallengeKind } from '@domain/challenges'
 
 export interface Profile {
   id: string
@@ -18,6 +19,8 @@ export interface Group {
   timezone: string
   starts_on: string
   require_location: boolean
+  /** Limite de exceções por pessoa no mês. Pode faltar antes da migração da leva 3. */
+  exceptions_per_month?: number
 }
 
 export interface KittyGoal {
@@ -33,7 +36,7 @@ export interface KittyGoal {
 
 export type GroupRulesUpdate = Pick<
   Group,
-  'name' | 'weekly_goal' | 'fine_min' | 'fine_max' | 'sunday_counts' | 'jokers_per_month' | 'require_location'
+  'name' | 'weekly_goal' | 'fine_min' | 'fine_max' | 'sunday_counts' | 'jokers_per_month' | 'require_location' | 'exceptions_per_month'
 >
 
 export interface Member {
@@ -130,10 +133,35 @@ export interface Reward {
   created_at: string
 }
 
+export interface MonthlyChallenge {
+  id: string
+  group_id: string
+  month: string
+  title: string
+  kind: ChallengeKind
+  target: number
+  created_by: string | null
+  created_at: string
+}
+
+export interface EvolutionPhoto {
+  id: string
+  user_id: string
+  group_id: string
+  photo_path: string
+  taken_on: string
+  weight_kg: number | null
+  note: string | null
+  shared: boolean
+  created_at: string
+}
+
 export interface RewardSpin {
   id: string
   group_id: string
-  week_start: string
+  /** Semana do marco de 2 semanas seguidas; nulo quando o giro veio de um desafio do mês. */
+  week_start: string | null
+  challenge_id?: string | null
   reward_id: string | null
   reward_text: string
   spun_by: string | null

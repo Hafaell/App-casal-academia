@@ -392,12 +392,102 @@ describe('Planejar a semana e "vamos?"', () => {
 
   it('antes da atualização do banco, o Início abre normal e as telas novas avisam', async () => {
     const fake = seedCouple()
-    for (const t of ['workout_plans', 'nudges', 'rewards', 'reward_spins', 'exception_rejections']) fake.missingTables.add(t)
+    for (const t of ['workout_plans', 'nudges', 'rewards', 'reward_spins', 'exception_rejections', 'monthly_challenges', 'evolution_photos']) fake.missingTables.add(t)
     await open('/')
     expect(await screen.findByText('Faltam 2 em 4 dias')).toBeTruthy()
     expect(screen.queryByText('Plano de hoje')).toBeNull()
     await open('/premios')
     expect(await screen.findByText(/depois que a atualização do banco for aplicada/)).toBeTruthy()
+  })
+})
+
+describe('Limite mensal de exceções', () => {
+  it('avisa quantas restam e trava no limite; o limite muda nas regras do grupo', async () => {
+    const fake = seedCouple()
+    fake.db.groups[0].exceptions_per_month = 1
+    fake.db.exceptions = [
+      { id: 'x1', group_id: 'g1', user_id: 'u1', day: '2026-11-20', reason: 'viagem', note: null, created_at: '2026-11-17T12:00:00Z', reviewed_by: 'u2', reviewed_at: '2026-11-17T13:00:00Z' },
+    ]
+    await open('/excecoes')
+    await press(await screen.findByText('19/11'))
+    expect(await screen.findByText('Você já usou a única exceção de novembro.')).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Marcar exceção' })).toBeDisabled()
+
+    await open('/grupo')
+    await type(await screen.findByLabelText('Exceções por pessoa no mês'), '3')
+    await tap('Salvar regras')
+    await waitFor(() => expect(fake.db.groups[0].exceptions_per_month).toBe(3))
+  })
+
+  it('mostra quantas restam no mês', async () => {
+    seedCouple()
+    await open('/excecoes')
+    await press(await screen.findByText('19/11'))
+    expect(await screen.findByText('Restam 4 de 4 exceções em novembro.')).toBeTruthy()
+  })
+})
+
+describe('Desafio do mês', () => {
+  it('cria pela sugestão, acompanha, cumpre e ganha um giro', async () => {
+    const fake = seedCouple()
+    fake.db.checkins[0].kind = 'cardio'
+    await open('/desafio')
+    await press(await screen.findByLabelText('Criar Mês do cardio em Novembro de 2026'))
+    await waitFor(() => expect(fake.db.monthly_challenges[0]).toMatchObject({ month: '2026-11-01', kind: 'cardio', target: 8, created_by: 'u1' }))
+    expect(await screen.findByText('1 de 8')).toBeTruthy()
+
+    await press(screen.getAllByText('Editar')[0])
+    // O primeiro formulário é o deste mês (o do próximo mês fica embaixo).
+    await type((await screen.findAllByLabelText('Quantos no mês (somando os dois)'))[0], '1')
+    await tap('Salvar')
+    expect(await screen.findByText(/Cumprido!/)).toBeTruthy()
+
+    await press(screen.getByText('🎁 Girar a roleta de prêmios'))
+    expect(await screen.findByText('Desafio cumprido: Mês do cardio')).toBeTruthy()
+    await press(screen.getByText('🎰 Girar a roleta'))
+    await waitFor(() => expect(fake.db.reward_spins[0]).toMatchObject({ challenge_id: fake.db.monthly_challenges[0].id, week_start: null }))
+
+    // Depois do giro, o desafio fica travado.
+    await open('/desafio')
+    expect(await screen.findByText('🎁 Giro de prêmio já usado')).toBeTruthy()
+    expect(screen.queryByText('Apagar desafio')).toBeNull()
+
+    await open('/')
+    expect(await screen.findByText(/Mês do cardio: 1\/1/)).toBeTruthy()
+  })
+})
+
+describe('Fotos de evolução', () => {
+  it('pede ciência, guarda a foto privada e mostra as do parceiro que ele escolheu mostrar', async () => {
+    const fake = seedCouple()
+    fake.db.evolution_photos = [
+      { id: 'ev-ana', user_id: 'u2', group_id: 'g1', photo_path: 'u2/a.jpg', taken_on: '2026-11-10', weight_kg: 60, note: null, shared: true, created_at: '2026-11-10T12:00:00Z' },
+    ]
+    await open('/evolucao')
+    await press(await screen.findByText('Entendi, quero usar'))
+    await press(await screen.findByText('📷 Adicionar foto'))
+    await press(await screen.findByText('🖼️ Da galeria'))
+    await type(await screen.findByLabelText('Peso em kg (opcional)'), '72,5')
+    await press(screen.getByText('Guardar foto'))
+    await waitFor(() =>
+      expect(fake.db.evolution_photos.find((p) => p.user_id === 'u1')).toMatchObject({ taken_on: '2026-11-18', weight_kg: 72.5, shared: false }),
+    )
+    expect(fake.uploads.some((u) => u.startsWith('u1/'))).toBe(true)
+    expect(await screen.findByText('Mostradas por Ana')).toBeTruthy()
+  })
+
+  it('recusa data no futuro', async () => {
+    seedCouple()
+    await open('/evolucao')
+    // A ciência fica salva no aparelho: pode já ter sido dada no teste anterior.
+    await screen.findByText(/Entendi, quero usar|Adicionar foto/)
+    const consent = screen.queryByText('Entendi, quero usar')
+    if (consent) await press(consent)
+    await press(await screen.findByText('📷 Adicionar foto'))
+    await press(await screen.findByText('📷 Tirar agora'))
+    await type(await screen.findByLabelText('Data da foto (DD/MM/AAAA)'), '25/12/2026')
+    await press(screen.getByText('Guardar foto'))
+    expect((await screen.findAllByText('A data não pode ser no futuro')).length).toBeGreaterThan(0)
   })
 })
 

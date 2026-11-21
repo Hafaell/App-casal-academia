@@ -6,6 +6,7 @@
  */
 import { localDate, localToday } from '@domain/dates'
 import { rewardMilestones } from '@domain/rewards'
+import { challengeProgress } from '@domain/challenges'
 import { GYM_RADIUS_M, distanceMeters } from '@domain/geo'
 
 type Row = Record<string, any>
@@ -83,6 +84,11 @@ export function createFakeSupabase() {
       case 'exceptions':
         if (table('exception_rejections').some((r) => r.group_id === row.group_id && r.author_id === user && r.day === row.day))
           return { error: 'O seu parceiro recusou a exceção desse dia. Não dá para marcar de novo' }
+        {
+          const lim = groupOf(row.group_id).exceptions_per_month ?? 999
+          const used = table('exceptions').filter((x) => x.group_id === row.group_id && x.user_id === user && x.day.slice(0, 7) === row.day.slice(0, 7)).length
+          if (used >= lim) return { error: `Você já usou as ${lim} exceções deste mês` }
+        }
         return { id: uid(name), note: null, ...row, user_id: user, created_at: now(), reviewed_by: null, reviewed_at: null }
       case 'jokers':
         return { id: uid(name), note: null, ...row, user_id: user, created_at: now() }
@@ -94,6 +100,12 @@ export function createFakeSupabase() {
         if (table('nudges').some((n) => n.from_user === user && n.to_user === row.to_user && Date.parse(n.created_at) > Date.now() - 30 * 60_000))
           return { error: 'Você já chamou há pouco. Espere meia hora para chamar de novo' }
         return { id: uid('nudge'), ...row, from_user: user, created_at: now(), seen_at: null }
+      case 'monthly_challenges':
+        if (table('monthly_challenges').some((c) => c.group_id === row.group_id && c.month === row.month))
+          return { error: 'duplicate key value violates unique constraint "one_challenge_per_month"' }
+        return { id: uid('challenge'), ...row, created_by: user, created_at: now() }
+      case 'evolution_photos':
+        return { id: uid('evo'), weight_kg: null, note: null, shared: false, ...row, user_id: user, created_at: now() }
       case 'rewards':
         return { id: uid('reward'), active: true, ...row, created_at: now() }
       case 'gyms':
@@ -241,6 +253,17 @@ export function createFakeSupabase() {
       const r = table('rewards').find((x) => x.group_id === gid && x.active)
       if (!r) throw new Error('Cadastre pelo menos um prêmio ativo antes de girar')
       const spin = { id: uid('spin'), group_id: gid, week_start: p_week_start, reward_id: r.id, reward_text: r.description, spun_by: me(), created_at: now(), redeemed_at: null }
+      table('reward_spins').push(spin)
+      return { ...spin }
+    },
+    spin_challenge_reward: ({ p_challenge }) => {
+      const ch = table('monthly_challenges').find((x) => x.id === p_challenge)
+      if (!ch) throw new Error('Desafio não encontrado')
+      if (!challengeProgress(ch, table('checkins').filter((c) => c.group_id === ch.group_id)).complete) throw new Error('O desafio ainda não foi cumprido')
+      if (table('reward_spins').some((s) => s.challenge_id === ch.id)) throw new Error('O giro deste desafio já foi usado')
+      const r = table('rewards').find((x) => x.group_id === ch.group_id && x.active)
+      if (!r) throw new Error('Cadastre pelo menos um prêmio ativo antes de girar')
+      const spin = { id: uid('spin'), group_id: ch.group_id, week_start: null, challenge_id: ch.id, reward_id: r.id, reward_text: r.description, spun_by: me(), created_at: now(), redeemed_at: null }
       table('reward_spins').push(spin)
       return { ...spin }
     },

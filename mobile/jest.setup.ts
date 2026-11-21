@@ -78,6 +78,16 @@ jest.mock('react-native-svg', () => {
   return { __esModule: true, default: Stub, Svg: Stub, Path: Stub, Rect: Stub, Circle: Stub }
 })
 
+jest.mock('expo-image-picker', () => {
+  const asset = { uri: 'file:///galeria.jpg', base64: '/9j/', width: 1080, height: 1440 }
+  return {
+    requestCameraPermissionsAsync: async () => ({ granted: true }),
+    requestMediaLibraryPermissionsAsync: async () => ({ granted: true }),
+    launchCameraAsync: async () => ({ canceled: false, assets: [asset] }),
+    launchImageLibraryAsync: async () => ({ canceled: false, assets: [asset] }),
+  }
+})
+
 jest.mock('expo-clipboard', () => ({
   getStringAsync: async () => require('@/test/fakeState').fakeState.clipboard,
 }))

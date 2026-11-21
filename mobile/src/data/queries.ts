@@ -7,7 +7,9 @@ import type {
   Checkin,
   CheckinReport,
   ExceptionDay,
+  EvolutionPhoto,
   ExceptionRejection,
+  MonthlyChallenge,
   Nudge,
   PlanPeriod,
   Reward,
@@ -702,5 +704,119 @@ export function useSeeNudges() {
     mutationFn: async (ids: string[]) =>
       must(await supabase.from('nudges').update({ seen_at: new Date().toISOString() }).in('id', ids)),
     onSuccess: () => invalidate('nudges'),
+  })
+}
+
+// ---------------------------------------------------------------------
+// Leva 3: desafios do mês e fotos de evolução (o limite de exceções é regra do grupo).
+// ---------------------------------------------------------------------
+
+export const EVOLUTION_BUCKET = 'evolution'
+
+export function useChallenges(gid: string) {
+  return useQuery({
+    queryKey: ['challenges', gid],
+    retry: false,
+    queryFn: async () =>
+      must(await supabase.from('monthly_challenges').select('*').eq('group_id', gid).order('month', { ascending: false })) as MonthlyChallenge[],
+  })
+}
+
+export function useSaveChallenge(gid: string) {
+  const invalidate = useInvalidate()
+  return useMutation({
+    mutationFn: async (c: { id?: string; month: string; title: string; kind: MonthlyChallenge['kind']; target: number }) => {
+      const patch = { title: c.title.trim().slice(0, 60), kind: c.kind, target: c.target }
+      if (c.id) return must(await supabase.from('monthly_challenges').update(patch).eq('id', c.id))
+      return must(await supabase.from('monthly_challenges').insert({ group_id: gid, month: c.month, ...patch }))
+    },
+    onSuccess: () => invalidate('challenges'),
+  })
+}
+
+export function useDeleteChallenge() {
+  const invalidate = useInvalidate()
+  return useMutation({
+    mutationFn: async (id: string) => must(await supabase.from('monthly_challenges').delete().eq('id', id)),
+    onSuccess: () => invalidate('challenges', 'reward-spins'),
+  })
+}
+
+/** O banco confere se o desafio foi cumprido e sorteia o prêmio. */
+export function useSpinChallengeReward() {
+  const invalidate = useInvalidate()
+  return useMutation({
+    mutationFn: async (challengeId: string) =>
+      must(await supabase.rpc('spin_challenge_reward', { p_challenge: challengeId })) as RewardSpin,
+    onSuccess: () => invalidate('reward-spins'),
+  })
+}
+
+/** Fotos de evolução que a pessoa pode ver: as próprias e as que o parceiro escolheu mostrar. */
+export function useEvolutionPhotos(gid: string) {
+  return useQuery({
+    queryKey: ['evolution', gid],
+    retry: false,
+    queryFn: async () =>
+      must(await supabase.from('evolution_photos').select('*').eq('group_id', gid).order('taken_on').order('created_at')) as EvolutionPhoto[],
+  })
+}
+
+export function useEvolutionUrls(paths: string[]) {
+  const sorted = [...new Set(paths)].sort()
+  return useQuery({
+    queryKey: ['evolution-urls', sorted],
+    enabled: sorted.length > 0,
+    staleTime: 50 * 60 * 1000,
+    queryFn: async () => {
+      const data = must(await supabase.storage.from(EVOLUTION_BUCKET).createSignedUrls(sorted, 60 * 60))
+      const map = new Map<string, string>()
+      for (const item of data) if (item.path && item.signedUrl) map.set(item.path, item.signedUrl)
+      return map
+    },
+  })
+}
+
+export function useAddEvolutionPhoto(gid: string, userId: string) {
+  const invalidate = useInvalidate()
+  return useMutation({
+    mutationFn: async (input: { photo: Uint8Array; takenOn: string; weightKg: number | null; note: string; shared: boolean }) => {
+      const path = `${userId}/${randomUUID()}.jpg`
+      const body = input.photo.buffer.slice(input.photo.byteOffset, input.photo.byteOffset + input.photo.byteLength) as ArrayBuffer
+      must(await supabase.storage.from(EVOLUTION_BUCKET).upload(path, body, { contentType: 'image/jpeg' }))
+      const res = await supabase.from('evolution_photos').insert({
+        group_id: gid,
+        photo_path: path,
+        taken_on: input.takenOn,
+        weight_kg: input.weightKg,
+        note: input.note.trim() || null,
+        shared: input.shared,
+      })
+      if (res.error) {
+        await supabase.storage.from(EVOLUTION_BUCKET).remove([path])
+        throw res.error
+      }
+    },
+    onSuccess: () => invalidate('evolution'),
+  })
+}
+
+export function useUpdateEvolutionPhoto() {
+  const invalidate = useInvalidate()
+  return useMutation({
+    mutationFn: async (input: { id: string; shared?: boolean }) =>
+      must(await supabase.from('evolution_photos').update({ shared: input.shared }).eq('id', input.id)),
+    onSuccess: () => invalidate('evolution'),
+  })
+}
+
+export function useDeleteEvolutionPhoto() {
+  const invalidate = useInvalidate()
+  return useMutation({
+    mutationFn: async (p: EvolutionPhoto) => {
+      must(await supabase.from('evolution_photos').delete().eq('id', p.id))
+      await supabase.storage.from(EVOLUTION_BUCKET).remove([p.photo_path])
+    },
+    onSuccess: () => invalidate('evolution'),
   })
 }

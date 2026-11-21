@@ -328,10 +328,13 @@ export function PhotoViewer({ url, caption, onClose }: { url: string | null; cap
         <View style={{ flex: 1, padding: 8 }}>
           {url ? <Image source={{ uri: url }} style={{ flex: 1, borderRadius: 8 }} resizeMode="contain" accessibilityIgnoresInvertColors /> : null}
         </View>
-        {caption ? (
+        {typeof caption === 'string' ? (
           <Txt size={14} color="rgba(255,255,255,0.8)" center style={{ paddingHorizontal: 16, paddingBottom: Math.max(insets.bottom, 8) + 8 }}>
             {caption}
           </Txt>
+        ) : caption ? (
+          // Legenda com botões (ex.: fotos de evolução): fica fora do texto.
+          <View style={{ paddingHorizontal: 16, paddingBottom: Math.max(insets.bottom, 8) + 8 }}>{caption}</View>
         ) : null}
       </Pressable>
       <ToastHost />

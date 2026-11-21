@@ -54,7 +54,7 @@ Esta branch (`react-native`) tem **só o app nativo**. O site (PWA em React + Vi
 ## Regras que não podem ser quebradas
 
 - **O banco é a fonte da verdade do que vale dinheiro** (`close_week` e os gatilhos de check-in, exceção e coringa). O cálculo em `src/domain/rules.ts` serve só para o placar ao vivo e precisa ficar idêntico ao do banco. Mudou uma regra: mude os dois e atualize `supabase/tests/01_rules.sql`.
-- **Nunca edite uma migração já aplicada.** Crie um arquivo novo `AAAAMMDDHHMMSS_descricao.sql`. Todas as migrações atuais já estão aplicadas em produção (a última é `20261121000001_rewards_plans_exception_review.sql`, de 21/11/2026).
+- **Nunca edite uma migração já aplicada.** Crie um arquivo novo `AAAAMMDDHHMMSS_descricao.sql`. Todas as migrações atuais já estão aplicadas em produção (a última é `20261121000002_exception_limit_challenges_evolution.sql`, de 21/11/2026).
 - **Datas** são strings `AAAA-MM-DD` no fuso do grupo. Não use o `Date` do aparelho para decidir "hoje"; use `src/domain/dates.ts`.
 - Interface, erros e comentários em português do Brasil. Nomes de código em inglês, menos os termos do domínio (`caixinha`, `coringa`).
 - Commits em português, descrevendo o que muda para o usuário. Branch de trabalho: `react-native`.
