@@ -59,6 +59,14 @@ export function seedCouple() {
   db.reactions = []
   db.checkin_reports = []
   db.kitty_withdrawals = []
+  db.exception_rejections = []
+  db.workout_plans = []
+  db.nudges = []
+  db.reward_spins = []
+  db.rewards = [
+    { id: 'r1', group_id: 'g1', description: 'Massagem de 20 minutos', active: true, created_at: '2026-11-01T10:00:00Z' },
+    { id: 'r2', group_id: 'g1', description: 'Café da manhã na cama', active: false, created_at: '2026-11-01T10:01:00Z' },
+  ]
   db.punishments = [
     { id: 'p1', group_id: 'g1', kind: 'Tarefa', description: 'Lavar a louça por uma semana', active: true, created_at: '2026-11-01T10:00:00Z' },
     { id: 'p2', group_id: 'g1', kind: 'Date', description: 'Pagar o cinema', active: false, created_at: '2026-11-01T10:01:00Z' },

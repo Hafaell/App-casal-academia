@@ -1,6 +1,6 @@
 # Melhorias para o casal: o que construir e quando
 
-Criado em 19/11/2026. Este arquivo reúne as ideias para tornar o app mais valioso para casais (e, por consequência, mais fácil de vender). **Leva 1 pronta em 20/11/2026: F4, F2 e F1 (sem o vídeo)**, ver [plano-leva-1.md](./plano-leva-1.md). A ideia é decidir, item por item, o que entra agora e o que fica para depois.
+Criado em 19/11/2026. Este arquivo reúne as ideias para tornar o app mais valioso para casais (e, por consequência, mais fácil de vender). **Leva 1 pronta em 20/11/2026: F4, F2 e F1 (sem o vídeo)**, ver [plano-leva-1.md](./plano-leva-1.md). **Leva 2 pronta em 21/11/2026: F3, F5 e F6**, ver [plano-leva-2.md](./plano-leva-2.md). A ideia é decidir, item por item, o que entra agora e o que fica para depois.
 
 Ele é separado do [MELHORIAS.md](./MELHORIAS.md), que guarda as melhorias técnicas anteriores, e complementa o [app-comerciavel.md](./app-comerciavel.md) (lojas, custos, segurança) e o [PROGRESSO.md](./PROGRESSO.md) (estado do projeto).
 
@@ -52,7 +52,7 @@ Cada item tem uma caixa de decisão. Marque **Agora**, **Depois** ou **Não**.
 - **Esforço:** **M** (objetivo e progresso); **M** a mais para o Pix copia e cola.
 - **Banco:** tabela nova de objetivos (migração nova). Não mexe em `close_week`.
 - **Cuidado:** o app nunca deve receber nem guardar o dinheiro; só registra e gera o código **[Certa]** (intermediar pagamento exigiria regras do Banco Central).
-- **Decisão:** objetivo: [x] Agora (**feito**) · Pix copia e cola: [x] Agora (**feito**)
+- **Decisão:** objetivo: [x] Agora (**feito**) · Pix copia e cola: [x] Não (feito e retirado em 20/11/2026)
 
 ### F3. Roleta de prêmios
 
@@ -61,7 +61,7 @@ Cada item tem uma caixa de decisão. Marque **Agora**, **Depois** ou **Não**.
 - **Esforço:** **G**.
 - **Banco:** se o prêmio virar uma obrigação registrada, o sorteio deve ser feito no banco, como a multa (mexe em `close_week` ou numa função nova). Se for só diversão no app, é mais simples **[Provável]**.
 - **Regra de dinheiro?** Não, desde que o prêmio não altere multa nem meta.
-- **Decisão:** [ ] Agora [ ] Depois [ ] Não
+- **Decisão:** [x] Agora (**feito**: um giro a cada 2 semanas seguidas, sorteio no banco)
 
 ### F4. Treino juntos
 
@@ -79,7 +79,7 @@ Cada item tem uma caixa de decisão. Marque **Agora**, **Depois** ou **Não**.
 - **Esforço:** **M** sem notificações; **G** com notificações (exige push).
 - **Banco:** tabela nova de planos (migração nova).
 - **Depende de push:** no PWA do iPhone o push exige o app instalado e a Edge Function; no app nativo é mais confiável.
-- **Decisão:** [ ] Agora (sem push) [ ] Depois (com push) [ ] Não
+- **Decisão:** [x] Agora, sem push (**feito**: aviso dentro do app) · com push: depois
 
 ### F6. Exceção com aprovação do parceiro
 
@@ -87,7 +87,7 @@ Cada item tem uma caixa de decisão. Marque **Agora**, **Depois** ou **Não**.
 - **Valor:** médio a alto. Fortalece a confiança entre os dois.
 - **Esforço:** **M** a **G**.
 - **Regra de dinheiro: SIM.** Muda o gatilho de exceção e o `close_week` (só contar as aprovadas), o `rules.ts` precisa ficar idêntico, e `supabase/tests/01_rules.sql` precisa ser atualizado. Migração nova, sem editar as antigas.
-- **Decisão:** [ ] Agora [ ] Depois [ ] Não
+- **Decisão:** [x] Agora (**feito**: o parceiro pode recusar até 23h59 do dia em que foi marcada; sem resposta, vale)
 
 ### F7. Treino automático pelo relógio (Apple Saúde e Google Health Connect)
 

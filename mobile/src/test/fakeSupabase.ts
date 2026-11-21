@@ -4,7 +4,8 @@
  * (quem é o dono da linha, o dia do check-in e a conferência da academia).
  * As regras de dinheiro de verdade são testadas no banco (supabase/tests).
  */
-import { localToday } from '@domain/dates'
+import { localDate, localToday } from '@domain/dates'
+import { rewardMilestones } from '@domain/rewards'
 import { GYM_RADIUS_M, distanceMeters } from '@domain/geo'
 
 type Row = Record<string, any>
@@ -80,8 +81,21 @@ export function createFakeSupabase() {
         }
       }
       case 'exceptions':
+        if (table('exception_rejections').some((r) => r.group_id === row.group_id && r.author_id === user && r.day === row.day))
+          return { error: 'O seu parceiro recusou a exceção desse dia. Não dá para marcar de novo' }
+        return { id: uid(name), note: null, ...row, user_id: user, created_at: now(), reviewed_by: null, reviewed_at: null }
       case 'jokers':
         return { id: uid(name), note: null, ...row, user_id: user, created_at: now() }
+      case 'workout_plans':
+        if (table('workout_plans').some((p) => p.group_id === row.group_id && p.user_id === user && p.day === row.day))
+          return { error: 'duplicate key value violates unique constraint "one_plan_per_day"' }
+        return { id: uid('plan'), period: null, ...row, user_id: user, created_at: now() }
+      case 'nudges':
+        if (table('nudges').some((n) => n.from_user === user && n.to_user === row.to_user && Date.parse(n.created_at) > Date.now() - 30 * 60_000))
+          return { error: 'Você já chamou há pouco. Espere meia hora para chamar de novo' }
+        return { id: uid('nudge'), ...row, from_user: user, created_at: now(), seen_at: null }
+      case 'rewards':
+        return { id: uid('reward'), active: true, ...row, created_at: now() }
       case 'gyms':
         return { id: uid('gym'), ...row, created_by: user, created_at: now() }
       case 'kitty_withdrawals':
@@ -190,6 +204,45 @@ export function createFakeSupabase() {
       if (p_paid !== null) Object.assign(r, { paid_at: p_paid ? now() : null, paid_marked_by: me() })
       if (p_task_done !== null) r.task_done_at = p_task_done ? now() : null
       return null
+    },
+    review_exception: ({ p_exception, p_approve, p_why }) => {
+      const e = table('exceptions').find((x) => x.id === p_exception)
+      if (!e) throw new Error('Exceção não encontrada')
+      if (e.user_id === me()) throw new Error('A exceção é sua: quem responde é o seu parceiro')
+      if (e.reviewed_at) throw new Error('Essa exceção já foi aprovada')
+      const tz = groupOf(e.group_id).timezone
+      if (localToday(tz) > localDate(e.created_at, tz))
+        throw new Error('O prazo para responder acabou às 23h59 do dia em que a exceção foi marcada. Ela já vale')
+      if (p_approve) {
+        Object.assign(e, { reviewed_by: me(), reviewed_at: now() })
+        return null
+      }
+      table('exception_rejections').push({
+        id: uid('rejection'),
+        group_id: e.group_id,
+        exception_id: e.id,
+        author_id: e.user_id,
+        rejected_by: me(),
+        day: e.day,
+        reason: e.reason,
+        note: e.note,
+        why: p_why ? String(p_why).trim() || null : null,
+        created_at: now(),
+      })
+      db.exceptions = table('exceptions').filter((x) => x.id !== e.id)
+      return null
+    },
+    spin_reward: ({ gid, p_week_start }) => {
+      const outcomes = table('week_results')
+        .filter((r) => r.group_id === gid)
+        .map((r) => ({ weekStart: r.week_start, userId: r.user_id, met: r.met, usedJoker: r.used_joker }))
+      if (!rewardMilestones(outcomes).includes(p_week_start)) throw new Error('Essa semana não completou 2 semanas seguidas de meta batida')
+      if (table('reward_spins').some((s) => s.group_id === gid && s.week_start === p_week_start)) throw new Error('A roleta deste prêmio já foi girada')
+      const r = table('rewards').find((x) => x.group_id === gid && x.active)
+      if (!r) throw new Error('Cadastre pelo menos um prêmio ativo antes de girar')
+      const spin = { id: uid('spin'), group_id: gid, week_start: p_week_start, reward_id: r.id, reward_text: r.description, spun_by: me(), created_at: now(), redeemed_at: null }
+      table('reward_spins').push(spin)
+      return { ...spin }
     },
     complete_kitty_goal: ({ p_goal }) => {
       const g = table('kitty_goals').find((x) => x.id === p_goal)

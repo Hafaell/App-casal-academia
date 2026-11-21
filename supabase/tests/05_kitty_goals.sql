@@ -1,5 +1,5 @@
 -- =====================================================================
--- Testes da caixinha com objetivo e da chave Pix (roda depois do 04_reports.sql,
+-- Testes da caixinha com objetivo (roda depois do 04_reports.sql,
 -- na mesma sessão). Usa um grupo novo, só da pessoa a, para o saldo começar do zero.
 -- =====================================================================
 
@@ -9,11 +9,6 @@ declare gid uuid;
 begin
   gid := public.create_group('Caixinha');
   perform set_config('test.kg', gid::text, false);
-
-  -- Chave Pix do grupo: membro salva; limites do Pix valem.
-  update public.groups set pix_key = 'rafa@x.com', pix_name = 'Rafael', pix_city = 'Sao Paulo' where id = gid;
-  assert (select pix_key from public.groups where id = gid) = 'rafa@x.com', 'chave Pix salva';
-  perform test.expect_error(format('update public.groups set pix_name = %L where id = %L', repeat('x', 26), gid), '%check constraint%');
 
   -- Um objetivo aberto por vez; não dá para criar já concluído.
   insert into public.kitty_goals (group_id, title, target_amount) values (gid, 'Viagem', 80);

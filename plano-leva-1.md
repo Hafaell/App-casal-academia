@@ -2,7 +2,9 @@
 
 Criado em 20/11/2026. Primeira leva das funções do [melhorias-casal.md](./melhorias-casal.md): F4, F2 e F1. Cada passo tem uma caixa, marcada quando o passo ficou pronto e testado.
 
-**Situação em 20/11/2026: código pronto e testado. Falta só aplicar a migração nova no Supabase** (passo no fim deste arquivo). Até lá, o app abre normalmente; só o objetivo da caixinha fica escondido e salvar a chave Pix dá erro.
+**Situação em 20/11/2026: código pronto e testado. A migração foi aplicada no Supabase em 21/11/2026** (junto com a da leva 2).
+
+**Ajuste de 20/11/2026, a pedido do Rafael:** a chave Pix e o "Copiar Pix" foram retirados (a Caixinha volta a ter só o botão de retirar, mais o objetivo). As imagens para compartilhar saíram da "Nossa história" e foram para uma tela própria, "Stories e colagens", com botões de um toque só (detalhes no fim da seção F1).
 
 Nenhuma das três funções mexe na regra de dinheiro (`close_week`, meta, multa). Por isso `src/domain/rules.ts` e `supabase/tests/01_rules.sql` não mudaram.
 
@@ -24,36 +26,41 @@ Nenhuma das três funções mexe na regra de dinheiro (`close_week`, meta, multa
 
 **Como funciona:** o casal define um objetivo (ex.: "Viagem para a praia", R$ 300). A barra mostra o saldo da caixinha contra o valor do objetivo. Ao chegar no valor, o botão "Usar o dinheiro" registra a retirada e conclui o objetivo, as duas coisas de uma vez no banco. Há um objetivo aberto por vez; os concluídos ficam listados.
 
-**Pix copia e cola:** a Caixinha guarda a chave Pix, o nome e a cidade de quem guarda o dinheiro. Em cada multa pendente aparece "Copiar Pix de R$ X", que copia o código com o valor certo. O dinheiro nunca passa pelo app.
+~~Pix copia e cola~~: feito e depois **retirado** a pedido do Rafael. A Caixinha continua só registrando; o Pix é feito por fora, como antes.
 
-- [x] Migração nova `supabase/migrations/20261120000001_kitty_goals.sql`: tabela `kitty_goals` (com RLS e permissões por coluna), função `complete_kitty_goal` e colunas `pix_key`, `pix_name` e `pix_city` em `groups`.
-- [x] Teste do banco `supabase/tests/05_kitty_goals.sql`, incluído no `run.sh`. **Escrito, mas não rodado**: esta máquina não tem Postgres.
-- [x] `src/domain/pix.ts`: gera o código Pix (padrão do Banco Central, com CRC16). O teste confere o resultado com o exemplo oficial do manual do Pix, letra por letra (7 testes).
-- [x] `queries.ts` e `types.ts`: ler, criar, editar, concluir e apagar objetivo; salvar a chave Pix.
+- [x] Migração nova `supabase/migrations/20261120000001_kitty_goals.sql`: tabela `kitty_goals` (com RLS e permissões por coluna) e função `complete_kitty_goal`. (As colunas da chave Pix foram tiradas do arquivo antes de ele ser aplicado.)
+- [x] Teste do banco `supabase/tests/05_kitty_goals.sql`, incluído no `run.sh`. **Rodou e passou em 21/11/2026 num Postgres portátil local (as 10 migrações aplicadas num banco vazio e os testes 01 a 06 passaram), com um leitor em Node no lugar do `psql`.**
+- [x] `queries.ts` e `types.ts`: ler, criar, editar, concluir e apagar objetivo.
 - [x] Caixinha: cartão do objetivo com barra de progresso, formulário e "Usar o dinheiro" (`mobile/src/components/KittyGoal.tsx`).
-- [x] Caixinha: formulário da chave Pix e botão "Copiar Pix" em cada multa pendente.
-- [x] A chave Pix aceita celular sem formatação (`27999991234` vira `+5527999991234`); CPF é reconhecido pelos dígitos verificadores.
 - [x] A retirada feita por um objetivo não mostra "Desfazer" (desfazer deixaria o objetivo marcado como feito com o dinheiro de volta).
 - [x] Se a tabela nova ainda não existir no banco, a Caixinha abre normal e só esconde o objetivo (há teste para isso).
 
-## F1. Nossa história (relatório do mês e colagem do ano)
+## F1. Nossa história (relatório do mês) e Stories e colagens
 
-**Relatório do mês:** treinos juntos, treinos no mês, semanas que os dois bateram, multas do mês, sequência atual, dia da semana e período (manhã, tarde, noite) em que mais treinam, e os números de cada um. Setas para ver os meses anteriores. Botão "Compartilhar o mês" gera uma imagem com até 6 fotos.
+**Relatório do mês:** treinos juntos, treinos no mês, semanas que os dois bateram, multas do mês, sequência atual, dia da semana e período (manhã, tarde, noite) em que mais treinam, e os números de cada um. Setas para ver os meses anteriores. Só números: nada de compartilhar nesta tela.
 
-**Colagem do ano:** até 12 fotos do ano, espalhadas pelos meses e com preferência para os treinos a dois, mais o total de treinos, de treinos juntos e de semanas batidas. Botão para compartilhar.
+**Stories e colagens** (tela própria, `/compartilhar`, em Mais e no fim da Nossa história), todas no formato de story (1080x1920), com setas para escolher o mês:
+
+- **Story "treinamos juntos":** número grande de treinos juntos no mês, fotos desses treinos, sequência do casal e total de treinos juntos no ano.
+- **Story do mês:** número de treinos do mês, semanas batidas, fotos do mês e treinos de cada um.
+- **Colagem do ano:** até 12 fotos do ano, espalhadas pelos meses e com preferência para os treinos a dois, mais o total de treinos, de treinos juntos e de semanas batidas.
+
+**Botão de um toque só:** antes, o primeiro toque só preparava a imagem (o texto mudava para "(pronto)") e era preciso tocar de novo para compartilhar; por isso parecia que nada acontecia. Agora um toque monta a imagem e já abre o compartilhar do celular. Se der erro, a mensagem aparece na tela e no terminal do Expo. O cartão da semana no Feed usa o mesmo botão.
 
 **Fica para depois:** o vídeo do ano (exige gravar vídeo no aparelho; é o item mais pesado).
 
 - [x] `src/domain/report.ts`: números do mês, resumo do ano e escolha das fotos (7 testes). `localHour` novo em `dates.ts`, usando o fuso do grupo.
 - [x] `summaryCard.ts`: grade de 4 colunas com 12 fotos quadradas para a colagem. Testada com o Skia de computador: a grade de 12 fotos cabe na imagem de 1080x1350 (conferido na imagem gerada). O texto não aparece nesse teste, porque o Skia de computador não tem fontes; que ele cabe embaixo da grade vem da conta das medidas (a grade termina em 934 px, as três linhas de texto em cerca de 1190 px e o rodapé começa em 1252 px).
-- [x] Tela nova "Nossa história" (`/historia`), com link em Mais e no Início.
+- [x] Tela "Nossa história" (`/historia`), com link em Mais e no Início: só o relatório.
+- [x] Tela "Stories e colagens" (`/compartilhar`) e botão de um toque (`mobile/src/components/ShareImageButton.tsx`).
+- [x] `summaryCard.ts`: formato story (1080x1920) e número em destaque. Testado com o Skia de computador (a grade fica abaixo do destaque e acima do texto).
 
 ## Fechamento
 
 - [x] Testes de tela das três funções em `mobile/src/test/app.test.tsx` (5 testes novos).
 - [x] Raiz: `npm test` (72 testes) e `npm run typecheck` passam.
 - [x] `mobile/`: `npm test` (21 testes: 18 de tela, sendo 5 novos, e 3 de imagem), `npm run typecheck`, `npm run doctor` (20/20) e `npm run export` (iOS e Android) passam.
-- [ ] **Aplicar a migração nova no SQL Editor do Supabase** (o navegador automático não estava conectado). Passo a passo abaixo.
+- [x] **Migração aplicada no SQL Editor do Supabase** em 21/11/2026 (o navegador automático não estava conectado). Passo a passo abaixo.
 - [x] `PROGRESSO.md`, `melhorias-casal.md` e este plano atualizados.
 - [ ] Commit na branch `react-native`: pela regra do projeto, só quando o Rafael pedir. As alterações estão salvas nos arquivos, ainda sem commit.
 
@@ -78,7 +85,7 @@ Nenhuma das três funções mexe na regra de dinheiro (`close_week`, meta, multa
 
 **Se der errado:**
 
-- "relation kitty_goals already exists" ou "column pix_key already exists": a migração já foi aplicada. Nada a fazer.
+- "relation kitty_goals already exists": a migração já foi aplicada. Nada a fazer.
 - "relation kitty_withdrawals does not exist": a migração das retiradas não está no banco. Aplique antes `20261119000004_kitty_withdrawals.sql` do mesmo jeito e depois repita este passo.
 - Qualquer outro erro: copie a mensagem e mande para o Claude.
 

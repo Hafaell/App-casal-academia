@@ -1,19 +1,10 @@
 -- ---------------------------------------------------------------------
--- Caixinha com objetivo e chave Pix do grupo
+-- Caixinha com objetivo
 --
 -- O objetivo dá um destino ao dinheiro das multas (viagem, jantar, presente).
 -- O progresso é o saldo da caixinha: multas pagas menos retiradas.
--- A chave Pix serve só para gerar o "Pix copia e cola": o dinheiro nunca passa pelo app.
 -- Nada aqui muda a regra de dinheiro (close_week, meta, multa).
 -- ---------------------------------------------------------------------
-
--- Quem guarda o dinheiro da caixinha. Nome e cidade seguem os limites do Pix (25 e 15 letras).
-alter table public.groups
-  add column pix_key text check (pix_key is null or char_length(pix_key) between 1 and 77),
-  add column pix_name text check (pix_name is null or char_length(pix_name) between 1 and 25),
-  add column pix_city text check (pix_city is null or char_length(pix_city) between 1 and 15);
-
-grant update (pix_key, pix_name, pix_city) on public.groups to authenticated;
 
 create table public.kitty_goals (
   id uuid primary key default gen_random_uuid(),

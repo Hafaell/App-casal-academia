@@ -5,6 +5,7 @@ import { Button, Card, Chip, Field, Input, PageHeader, Screen, Spinner, Txt, con
 import { useAddException, useCheckins, useExceptions, useJokers, useRemoveException, useRemoveJoker, useUseJoker } from '@/data/queries'
 import { addDays, dayMonth, monthKey, monthLabel, weekRange, weekdayShort } from '@domain/dates'
 import { EXCEPTION_REASONS, type ExceptionReason } from '@domain/rules'
+import { ExceptionReviewBar } from '@/components/ExceptionReview'
 import { errorMessage } from '@/lib/supabase'
 import { alpha, colors } from '@/lib/theme'
 
@@ -42,7 +43,7 @@ export function ExceptionsScreen() {
       { day, reason, note },
       {
         onSuccess: () => {
-          toast('Exceção marcada')
+          toast('Exceção marcada. O parceiro pode recusar até 23h59 de hoje')
           setDay(null)
           setReason(null)
           setNote('')
@@ -189,15 +190,18 @@ export function ExceptionsScreen() {
                 Suas exceções
               </Txt>
               {mine.map((e) => (
-                <Card key={e.id} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12 }}>
-                  <Txt size={14}>
-                    {weekdayShort(e.day)} {dayMonth(e.day)} · <Txt size={14} color={colors.warn}>{EXCEPTION_REASONS[e.reason]}</Txt>
-                  </Txt>
-                  <Pressable onPress={() => remove.mutate(e.id, { onError: (err) => toast(errorMessage(err), 'error') })} hitSlop={8} accessibilityRole="button">
-                    <Txt size={12} muted>
-                      Remover
+                <Card key={e.id} style={{ paddingVertical: 12 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <Txt size={14}>
+                      {weekdayShort(e.day)} {dayMonth(e.day)} · <Txt size={14} color={colors.warn}>{EXCEPTION_REASONS[e.reason]}</Txt>
                     </Txt>
-                  </Pressable>
+                    <Pressable onPress={() => remove.mutate(e.id, { onError: (err) => toast(errorMessage(err), 'error') })} hitSlop={8} accessibilityRole="button">
+                      <Txt size={12} muted>
+                        Remover
+                      </Txt>
+                    </Pressable>
+                  </View>
+                  <ExceptionReviewBar exception={e} />
                 </Card>
               ))}
             </View>
@@ -216,6 +220,7 @@ export function ExceptionsScreen() {
                     : {weekdayShort(e.day)} {dayMonth(e.day)} · <Txt size={14} color={colors.warn}>{EXCEPTION_REASONS[e.reason]}</Txt>
                     {e.note ? <Txt size={14} muted>{` · ${e.note}`}</Txt> : null}
                   </Txt>
+                  <ExceptionReviewBar exception={e} />
                 </Card>
               ))}
             </View>

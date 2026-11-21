@@ -162,18 +162,21 @@ export function Chip({
   onPress,
   disabled,
   style,
+  accessibilityLabel,
 }: {
   label: string
   active: boolean
   onPress: () => void
   disabled?: boolean
   style?: StyleProp<ViewStyle>
+  accessibilityLabel?: string
 }) {
   return (
     <Pressable
       onPress={onPress}
       disabled={disabled}
       accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
       accessibilityState={{ selected: active, disabled }}
       style={[styles.chip, active ? { backgroundColor: colors.accent } : { backgroundColor: colors.surface2 }, disabled && { opacity: 0.3 }, style]}
     >

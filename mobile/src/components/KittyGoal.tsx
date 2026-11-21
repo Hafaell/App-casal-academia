@@ -1,12 +1,11 @@
-/** Caixinha: objetivo (para onde vai o dinheiro) e chave Pix de quem guarda o dinheiro. */
+/** Caixinha: objetivo (para onde vai o dinheiro). */
 import { useState } from 'react'
 import { Pressable, View } from 'react-native'
 import { useGroup } from '@/providers/GroupProvider'
 import { Button, Card, Field, Input, Txt, confirmAsync, useToast } from '@/components/ui'
-import { useCompleteKittyGoal, useDeleteKittyGoal, useSaveKittyGoal, useSavePix } from '@/data/queries'
+import { useCompleteKittyGoal, useDeleteKittyGoal, useSaveKittyGoal } from '@/data/queries'
 import type { KittyGoal } from '@/data/types'
 import { dayMonth, localDate } from '@domain/dates'
-import { pixPayload } from '@domain/pix'
 import { formatMoney } from '@domain/rules'
 import { errorMessage } from '@/lib/supabase'
 import { alpha, colors } from '@/lib/theme'
@@ -150,87 +149,6 @@ export function GoalForm({ groupId, goal, onClose }: { groupId: string; goal: Ki
       </Field>
       <Button onPress={submit} loading={save.isPending}>
         {goal ? 'Salvar' : 'Criar objetivo'}
-      </Button>
-    </View>
-  )
-}
-
-export function PixCard({ onEdit }: { onEdit: () => void }) {
-  const { group } = useGroup()
-  return (
-    <Card>
-      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-        <View style={{ flex: 1 }}>
-          <Txt size={14} weight="600">
-            Pix da caixinha
-          </Txt>
-          <Txt size={12} muted>
-            {group.pix_key
-              ? `As multas vão para ${group.pix_name} (${group.pix_key})`
-              : 'Cadastre a chave de quem guarda o dinheiro para copiar o Pix de cada multa.'}
-          </Txt>
-        </View>
-        <Pressable onPress={onEdit} hitSlop={10} accessibilityRole="button">
-          <Txt size={14} color={colors.accent}>
-            {group.pix_key ? 'Editar' : 'Cadastrar'}
-          </Txt>
-        </Pressable>
-      </View>
-    </Card>
-  )
-}
-
-export function PixForm({ onClose }: { onClose: () => void }) {
-  const { group } = useGroup()
-  const save = useSavePix(group.id)
-  const toast = useToast()
-  const [key, setKey] = useState(group.pix_key ?? '')
-  const [name, setName] = useState(group.pix_name ?? '')
-  const [city, setCity] = useState(group.pix_city ?? '')
-
-  function submit() {
-    const clean = { pix_key: key.trim() || null, pix_name: name.trim() || null, pix_city: city.trim() || null }
-    if (clean.pix_key) {
-      try {
-        // Monta um código de teste: recusa antes de salvar se faltar algo.
-        pixPayload({ key: clean.pix_key, name: clean.pix_name ?? '', city: clean.pix_city ?? '' })
-      } catch (err) {
-        return toast(errorMessage(err), 'error')
-      }
-    }
-    save.mutate(clean, {
-      onSuccess: () => {
-        toast(clean.pix_key ? 'Chave Pix salva' : 'Chave Pix removida')
-        onClose()
-      },
-      onError: (err) => toast(errorMessage(err), 'error'),
-    })
-  }
-
-  return (
-    <View style={{ gap: 16 }}>
-      <SheetTitle title="Pix da caixinha" onClose={onClose} />
-      <Txt size={14} muted>
-        O app só monta o código "Pix copia e cola". O dinheiro vai direto de um banco para o outro.
-      </Txt>
-      <Field label="Chave Pix">
-        <Input
-          placeholder="E-mail, celular com DDD, CPF ou chave aleatória"
-          value={key}
-          onChangeText={setKey}
-          autoCapitalize="none"
-          autoCorrect={false}
-          maxLength={77}
-        />
-      </Field>
-      <Field label="Nome de quem recebe">
-        <Input placeholder="Como aparece no banco" value={name} onChangeText={setName} maxLength={25} />
-      </Field>
-      <Field label="Cidade">
-        <Input placeholder="Ex: Vitória" value={city} onChangeText={setCity} maxLength={15} />
-      </Field>
-      <Button onPress={submit} loading={save.isPending}>
-        Salvar
       </Button>
     </View>
   )

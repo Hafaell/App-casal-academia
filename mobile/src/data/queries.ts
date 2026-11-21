@@ -7,13 +7,18 @@ import type {
   Checkin,
   CheckinReport,
   ExceptionDay,
+  ExceptionRejection,
+  Nudge,
+  PlanPeriod,
+  Reward,
+  RewardSpin,
+  WorkoutPlan,
   Group,
   GroupRulesUpdate,
   Gym,
   Joker,
   KittyGoal,
   KittyWithdrawal,
-  PixSettings,
   Member,
   Punishment,
   Reaction,
@@ -498,7 +503,7 @@ export function useDeleteKittyWithdrawal() {
 }
 
 // ---------------------------------------------------------------------
-// Caixinha: objetivo e chave Pix
+// Caixinha: objetivo
 // ---------------------------------------------------------------------
 
 /**
@@ -545,10 +550,157 @@ export function useDeleteKittyGoal() {
   })
 }
 
-export function useSavePix(gid: string) {
+// ---------------------------------------------------------------------
+// Leva 2: resposta à exceção, roleta de prêmios, planos e "vamos?".
+// Leituras sem retentativa: antes da migração 20261121000001 as tabelas não existem,
+// e a tela só esconde a parte nova em vez de travar.
+// ---------------------------------------------------------------------
+
+/** Parceiro aprova (só marca que viu) ou recusa (a exceção some e fica o registro). */
+export function useReviewException() {
   const invalidate = useInvalidate()
   return useMutation({
-    mutationFn: async (p: PixSettings) => must(await supabase.from('groups').update(p).eq('id', gid)),
-    onSuccess: () => invalidate('my-groups'),
+    mutationFn: async (input: { id: string; approve: boolean; why?: string }) =>
+      must(await supabase.rpc('review_exception', { p_exception: input.id, p_approve: input.approve, p_why: input.why ?? null })),
+    onSuccess: () => invalidate('exceptions', 'exception-rejections'),
+  })
+}
+
+export function useExceptionRejections(gid: string, from: string) {
+  return useQuery({
+    queryKey: ['exception-rejections', gid, from],
+    retry: false,
+    queryFn: async () =>
+      must(
+        await supabase.from('exception_rejections').select('*').eq('group_id', gid).gte('day', from).order('created_at', { ascending: false }),
+      ) as ExceptionRejection[],
+  })
+}
+
+export function useRewards(gid: string) {
+  return useQuery({
+    queryKey: ['rewards', gid],
+    retry: false,
+    queryFn: async () => must(await supabase.from('rewards').select('*').eq('group_id', gid).order('created_at')) as Reward[],
+  })
+}
+
+export function useRewardSpins(gid: string) {
+  return useQuery({
+    queryKey: ['reward-spins', gid],
+    retry: false,
+    queryFn: async () =>
+      must(await supabase.from('reward_spins').select('*').eq('group_id', gid).order('week_start', { ascending: false })) as RewardSpin[],
+  })
+}
+
+/** O banco confere o marco e sorteia o prêmio. */
+export function useSpinReward(gid: string) {
+  const invalidate = useInvalidate()
+  return useMutation({
+    mutationFn: async (weekStart: string) =>
+      must(await supabase.rpc('spin_reward', { gid, p_week_start: weekStart })) as RewardSpin,
+    onSuccess: () => invalidate('reward-spins'),
+  })
+}
+
+export function useRedeemReward() {
+  const invalidate = useInvalidate()
+  return useMutation({
+    mutationFn: async (input: { id: string; redeemed: boolean }) =>
+      must(
+        await supabase
+          .from('reward_spins')
+          .update({ redeemed_at: input.redeemed ? new Date().toISOString() : null })
+          .eq('id', input.id),
+      ),
+    onSuccess: () => invalidate('reward-spins'),
+  })
+}
+
+export function useSaveReward(gid: string) {
+  const invalidate = useInvalidate()
+  return useMutation({
+    mutationFn: async (r: { id?: string; description?: string; active?: boolean }) => {
+      if (r.id) {
+        const patch: Partial<Reward> = {}
+        if (r.description !== undefined) patch.description = r.description.trim()
+        if (r.active !== undefined) patch.active = r.active
+        return must(await supabase.from('rewards').update(patch).eq('id', r.id))
+      }
+      return must(await supabase.from('rewards').insert({ group_id: gid, description: (r.description ?? '').trim() }))
+    },
+    onSuccess: () => invalidate('rewards'),
+  })
+}
+
+export function useDeleteReward() {
+  const invalidate = useInvalidate()
+  return useMutation({
+    mutationFn: async (id: string) => must(await supabase.from('rewards').delete().eq('id', id)),
+    onSuccess: () => invalidate('rewards'),
+  })
+}
+
+export function usePlans(gid: string, from: string, to: string) {
+  return useQuery({
+    queryKey: ['plans', gid, from, to],
+    retry: false,
+    queryFn: async () =>
+      must(await supabase.from('workout_plans').select('*').eq('group_id', gid).gte('day', from).lte('day', to).order('day')) as WorkoutPlan[],
+  })
+}
+
+/** Liga ou desliga o dia no plano, ou troca o período. */
+export function useSetPlan(gid: string) {
+  const invalidate = useInvalidate()
+  return useMutation({
+    mutationFn: async (input: { day: string; existing: WorkoutPlan | undefined; on: boolean; period?: PlanPeriod | null }) => {
+      if (!input.on) {
+        if (input.existing) must(await supabase.from('workout_plans').delete().eq('id', input.existing.id))
+        return
+      }
+      if (input.existing) {
+        must(await supabase.from('workout_plans').update({ period: input.period ?? null }).eq('id', input.existing.id))
+        return
+      }
+      must(await supabase.from('workout_plans').insert({ group_id: gid, day: input.day, period: input.period ?? null }))
+    },
+    onSuccess: () => invalidate('plans'),
+  })
+}
+
+/** Chamadas "vamos?" que a pessoa recebeu e ainda não viu. */
+export function useMyNudges(gid: string, userId: string) {
+  return useQuery({
+    queryKey: ['nudges', gid, userId],
+    retry: false,
+    queryFn: async () =>
+      must(
+        await supabase
+          .from('nudges')
+          .select('*')
+          .eq('group_id', gid)
+          .eq('to_user', userId)
+          .order('created_at', { ascending: false }),
+      ) as Nudge[],
+  })
+}
+
+export function useSendNudge(gid: string) {
+  const invalidate = useInvalidate()
+  return useMutation({
+    mutationFn: async (toUsers: string[]) =>
+      must(await supabase.from('nudges').insert(toUsers.map((to_user) => ({ group_id: gid, to_user })))),
+    onSuccess: () => invalidate('nudges'),
+  })
+}
+
+export function useSeeNudges() {
+  const invalidate = useInvalidate()
+  return useMutation({
+    mutationFn: async (ids: string[]) =>
+      must(await supabase.from('nudges').update({ seen_at: new Date().toISOString() }).in('id', ids)),
+    onSuccess: () => invalidate('nudges'),
   })
 }

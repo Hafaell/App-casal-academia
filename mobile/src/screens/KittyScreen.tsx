@@ -1,13 +1,11 @@
 import { useState } from 'react'
 import { Pressable, View } from 'react-native'
-import * as Clipboard from 'expo-clipboard'
 import { useGroup } from '@/providers/GroupProvider'
 import { Avatar, Button, Card, Chip, EmptyState, Field, Input, PageHeader, Screen, Sheet, Spinner, Txt, memberColor, useToast } from '@/components/ui'
-import { GoalForm, GoalSection, PixCard, PixForm } from '@/components/KittyGoal'
+import { GoalForm, GoalSection } from '@/components/KittyGoal'
 import { useAddKittyWithdrawal, useDeleteKittyWithdrawal, useKittyGoals, useKittyWithdrawals, useSetDebtStatus, useWeekResults } from '@/data/queries'
 import type { KittyGoal, KittyWithdrawal, WeekResult } from '@/data/types'
 import { dayMonth, localDate, weekRange } from '@domain/dates'
-import { pixPayload } from '@domain/pix'
 import { formatMoney } from '@domain/rules'
 import { errorMessage } from '@/lib/supabase'
 import { alpha, colors } from '@/lib/theme'
@@ -20,7 +18,6 @@ export function KittyScreen() {
   const [filter, setFilter] = useState<'open' | 'all'>('open')
   const [showWithdrawModal, setShowWithdrawModal] = useState(false)
   const [editingGoal, setEditingGoal] = useState<KittyGoal | 'new' | null>(null)
-  const [editingPix, setEditingPix] = useState(false)
 
   const debts = (results.data ?? []).filter((r) => r.owes)
   const paidTotal = debts.filter((d) => d.paid_at).reduce((s, d) => s + d.fine_amount, 0)
@@ -76,8 +73,6 @@ export function KittyScreen() {
 
       {/* Objetivo da caixinha. Se a tabela ainda não existir no banco, some sem travar a tela. */}
       {goals.isSuccess && <GoalSection goals={goals.data} balance={Math.max(0, balance)} onEdit={setEditingGoal} />}
-
-      <PixCard onEdit={() => setEditingPix(true)} />
 
       {/* Quanto cada um deve */}
       <Card>
@@ -155,10 +150,6 @@ export function KittyScreen() {
         {editingGoal !== null && (
           <GoalForm groupId={group.id} goal={editingGoal === 'new' ? null : editingGoal} onClose={() => setEditingGoal(null)} />
         )}
-      </Sheet>
-
-      <Sheet open={editingPix} onClose={() => setEditingPix(false)}>
-        {editingPix && <PixForm onClose={() => setEditingPix(false)} />}
       </Sheet>
 
       {/* Janela de retirada */}
@@ -287,22 +278,6 @@ function DebtCard({ debt }: { debt: WeekResult }) {
   const run = (patch: { paid?: boolean; taskDone?: boolean }) =>
     setStatus.mutate({ weekId: debt.week_id, userId: debt.user_id, ...patch }, { onError: (err) => toast(errorMessage(err), 'error') })
 
-  async function copyPix() {
-    try {
-      const code = pixPayload({
-        key: group.pix_key ?? '',
-        name: group.pix_name ?? '',
-        city: group.pix_city ?? '',
-        amount: debt.fine_amount,
-        message: `Multa ${dayMonth(debt.week_start)}`,
-      })
-      await Clipboard.setStringAsync(code)
-      toast('Pix copiado. Abra o app do banco e use "Pix copia e cola".')
-    } catch (err) {
-      toast(errorMessage(err), 'error')
-    }
-  }
-
   return (
     <Card>
       <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
@@ -340,11 +315,6 @@ function DebtCard({ debt }: { debt: WeekResult }) {
           <View style={{ flex: 1 }} />
         )}
       </View>
-      {!debt.paid_at && debt.fine_amount > 0 && group.pix_key && (
-        <Button variant="ghost" style={{ marginTop: 8 }} textStyle={{ color: colors.accent }} onPress={copyPix}>
-          {`📋 Copiar Pix de ${formatMoney(debt.fine_amount)}`}
-        </Button>
-      )}
     </Card>
   )
 }

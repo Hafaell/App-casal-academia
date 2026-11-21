@@ -18,13 +18,7 @@ export interface Group {
   timezone: string
   starts_on: string
   require_location: boolean
-  /** Chave Pix de quem guarda a caixinha (para o "Pix copia e cola"). */
-  pix_key?: string | null
-  pix_name?: string | null
-  pix_city?: string | null
 }
-
-export type PixSettings = { pix_key: string | null; pix_name: string | null; pix_city: string | null }
 
 export interface KittyGoal {
   id: string
@@ -110,6 +104,61 @@ export interface ExceptionDay {
   reason: ExceptionReason
   note: string | null
   created_at: string
+  /** Quando o parceiro aprovou (nulo = sem resposta ainda). Pode faltar antes da migração da leva 2. */
+  reviewed_by?: string | null
+  reviewed_at?: string | null
+}
+
+export interface ExceptionRejection {
+  id: string
+  group_id: string
+  exception_id: string
+  author_id: string | null
+  rejected_by: string | null
+  day: string
+  reason: ExceptionReason
+  note: string | null
+  why: string | null
+  created_at: string
+}
+
+export interface Reward {
+  id: string
+  group_id: string
+  description: string
+  active: boolean
+  created_at: string
+}
+
+export interface RewardSpin {
+  id: string
+  group_id: string
+  week_start: string
+  reward_id: string | null
+  reward_text: string
+  spun_by: string | null
+  created_at: string
+  redeemed_at: string | null
+}
+
+export type PlanPeriod = 'manha' | 'tarde' | 'noite'
+
+export interface WorkoutPlan {
+  id: string
+  group_id: string
+  user_id: string
+  day: string
+  period: PlanPeriod | null
+  created_at: string
+}
+
+export interface Nudge {
+  id: string
+  group_id: string
+  from_user: string
+  to_user: string
+  created_at: string
+  seen_at: string | null
 }
 
 export interface Joker {

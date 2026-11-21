@@ -1,6 +1,6 @@
 /**
- * Cartão do resumo da semana: uma imagem com o placar e as fotos, para a pessoa compartilhar.
- * É desenhado no aparelho (Skia, no lugar do canvas do site). As fotos são privadas: o cartão
+ * Imagens para compartilhar (cartão da semana, stories e colagem do ano), com o placar e as fotos.
+ * São desenhadas no aparelho (Skia, no lugar do canvas do site). As fotos são privadas: a imagem
  * só sai do app se a pessoa tocar em compartilhar.
  */
 import * as Sharing from 'expo-sharing'
@@ -22,10 +22,14 @@ export interface SummaryCardData {
   footer: string
   /** 3 colunas de fotos em pé (semana, mês) ou 4 de fotos quadradas (colagem do ano). */
   columns?: 3 | 4
+  /** 'post' = 1080x1350 (feed); 'story' = 1080x1920 (stories, tela cheia do celular). */
+  format?: 'post' | 'story'
+  /** Número grande em destaque logo abaixo do título (ex.: "12" + "treinos juntos"). */
+  highlight?: { value: string; label: string }
 }
 
 const W = 1080
-const H = 1350 // 4:5, o formato do feed do Instagram.
+export const CARD_HEIGHT = { post: 1350, story: 1920 } as const
 
 async function loadPhoto(url: string): Promise<SkImage | null> {
   try {
@@ -59,14 +63,25 @@ export interface SummaryCard {
 }
 
 export async function buildSummaryCard(d: SummaryCardData): Promise<SummaryCard> {
+  const format = d.format ?? 'post'
+  const H = CARD_HEIGHT[format]
   const surface = Skia.Surface.MakeOffscreen(W, H)
   if (!surface) throw new Error('Não consegui montar a imagem neste aparelho.')
   const canvas = surface.getCanvas()
   canvas.drawColor(Skia.Color('#0b0f14'))
 
+  // No story o conteúdo desce para não ficar embaixo da barra do Instagram.
+  const offset = format === 'story' ? 200 : 0
   // Os textos são desenhados a partir do topo; o site usava a linha de base (y menos o tamanho da letra).
-  textBlock(d.title, { fontSize: 64, color: '#eef2f6', weight: FontWeight.Bold }).paint(canvas, 64, 120 - 64)
-  textBlock(d.subtitle, { fontSize: 38, color: '#8b97a8' }).paint(canvas, 64, 176 - 38)
+  textBlock(d.title, { fontSize: 64, color: '#eef2f6', weight: FontWeight.Bold }).paint(canvas, 64, offset + 120 - 64)
+  textBlock(d.subtitle, { fontSize: 38, color: '#8b97a8' }).paint(canvas, 64, offset + 176 - 38)
+  let top = offset + 224
+
+  if (d.highlight) {
+    textBlock(d.highlight.value, { fontSize: 180, color: '#c6f432', weight: FontWeight.Bold }).paint(canvas, 64, top)
+    textBlock(d.highlight.label, { fontSize: 48, color: '#eef2f6', weight: FontWeight.SemiBold }).paint(canvas, 64, top + 210)
+    top += 300
+  }
 
   // Fotos: 3 colunas em pé (até 2 linhas) ou 4 colunas quadradas (até 3 linhas).
   const cols = d.columns ?? 3
@@ -74,7 +89,6 @@ export async function buildSummaryCard(d: SummaryCardData): Promise<SummaryCard>
   const gap = 16
   const cellW = (W - 128 - gap * (cols - 1)) / cols
   const cellH = cols === 4 ? cellW : cellW * 1.25
-  const top = 224
   photos.forEach((img, i) => {
     const x = 64 + (i % cols) * (cellW + gap)
     const y = top + Math.floor(i / cols) * (cellH + gap)
@@ -86,7 +100,7 @@ export async function buildSummaryCard(d: SummaryCardData): Promise<SummaryCard>
   const rows = Math.ceil(photos.length / cols)
   let y = top + rows * (cellH + gap) + (rows ? 40 : 0)
 
-  // Placar de cada pessoa.
+  // Placar de cada pessoa (ou números do período).
   for (const line of d.lines) {
     const dot = Skia.Paint()
     dot.setColor(Skia.Color(line.color))
@@ -96,19 +110,19 @@ export async function buildSummaryCard(d: SummaryCardData): Promise<SummaryCard>
     y += 72
   }
 
-  textBlock(d.footer, { fontSize: 34, color: '#8b97a8' }).paint(canvas, 64, H - 64 - 34)
+  textBlock(d.footer, { fontSize: 34, color: '#8b97a8' }).paint(canvas, 64, H - (format === 'story' ? 200 : 64) - 34)
 
   surface.flush()
   const bytes = snapshot(surface).encodeToBytes(ImageFormat.JPEG, 90)
   if (!bytes || bytes.length === 0) throw new Error('Não consegui gerar a imagem.')
-  return { uri: writeTempFile(bytes, `semana-${Date.now()}.jpg`) }
+  return { uri: writeTempFile(bytes, `treino-${Date.now()}.jpg`) }
 }
 
 /**
  * Abre o compartilhamento do aparelho. Devolve false quando não deu (aparelho sem suporte):
  * quem chamou mostra a imagem para a pessoa ver.
  */
-export async function shareImage(card: SummaryCard, dialogTitle = 'Compartilhar a semana'): Promise<boolean> {
+export async function shareImage(card: SummaryCard, dialogTitle = 'Compartilhar'): Promise<boolean> {
   if (!(await Sharing.isAvailableAsync())) return false
   await Sharing.shareAsync(card.uri, { mimeType: 'image/jpeg', dialogTitle, UTI: 'public.jpeg' })
   return true

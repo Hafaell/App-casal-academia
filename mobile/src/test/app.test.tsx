@@ -173,7 +173,7 @@ describe('Treino juntos', () => {
   })
 })
 
-describe('Caixinha com objetivo e Pix', () => {
+describe('Caixinha com objetivo', () => {
   it('cria o objetivo, junta o dinheiro e usa', async () => {
     const fake = seedCouple()
     await open('/caixinha')
@@ -199,30 +199,6 @@ describe('Caixinha com objetivo e Pix', () => {
     expect(screen.getByText('🎯 Criar objetivo')).toBeTruthy()
   })
 
-  it('salva a chave Pix e copia o código da multa', async () => {
-    const fake = seedCouple()
-    await open('/caixinha')
-    await press(await screen.findByText('Cadastrar'))
-    await type(await screen.findByLabelText('Chave Pix'), 'rafa@teste.com')
-    await tap('Salvar')
-    // Com a janela aberta, o aviso aparece nela e na raiz do app.
-    expect((await screen.findAllByText('Informe o nome de quem recebe')).length).toBeGreaterThan(0)
-    expect(fake.db.groups[0].pix_key).toBeUndefined()
-
-    await type(screen.getByLabelText('Nome de quem recebe'), 'Rafael')
-    await type(screen.getByLabelText('Cidade'), 'Vitória')
-    await tap('Salvar')
-    expect(await screen.findByText('Chave Pix salva')).toBeTruthy()
-    expect(fake.db.groups[0]).toMatchObject({ pix_key: 'rafa@teste.com', pix_name: 'Rafael', pix_city: 'Vitória' })
-
-    await press(await screen.findByText(/Copiar Pix de R\$\s?30/))
-    expect(await screen.findByText(/Pix copiado/)).toBeTruthy()
-    expect(fakeState.clipboard).toMatch(/^000201/)
-    expect(fakeState.clipboard).toContain('rafa@teste.com')
-    expect(fakeState.clipboard).toContain('540530.00')
-    expect(fakeState.clipboard).toContain('6007Vitoria')
-  })
-
   it('sem a tabela de objetivos no banco, a Caixinha abre normal', async () => {
     const fake = seedCouple()
     fake.missingTables.add('kitty_goals')
@@ -234,8 +210,7 @@ describe('Caixinha com objetivo e Pix', () => {
 })
 
 describe('Nossa história', () => {
-  it('mostra o relatório do mês, troca de mês e prepara as imagens', async () => {
-    const { buildSummaryCard, shareImage } = jest.requireMock('@/lib/summaryCard')
+  it('mostra só o relatório do mês e troca de mês', async () => {
     seedCouple()
     await open('/mais')
     await press(await screen.findByText('Nossa história'))
@@ -245,21 +220,184 @@ describe('Nossa história', () => {
     expect(screen.getByText('2 treinos')).toBeTruthy() // Rafael
     expect(screen.getByText('1 treino')).toBeTruthy() // Ana
     expect(screen.getByText('0/1')).toBeTruthy() // a semana fechada teve multa
+    // Compartilhar fica na outra tela.
+    expect(screen.queryByText(/Compartilhar story|Compartilhar colagem/)).toBeNull()
 
     await press(screen.getByLabelText('Mês anterior'))
     expect(await screen.findByText('Outubro de 2026')).toBeTruthy()
     expect(screen.getByText('💑 0')).toBeTruthy()
     await press(screen.getByLabelText('Próximo mês'))
     expect(await screen.findByText('Novembro de 2026')).toBeTruthy()
+  })
+})
+
+describe('Stories e colagens', () => {
+  it('compartilha cada imagem com um toque só', async () => {
+    const { buildSummaryCard, shareImage } = jest.requireMock('@/lib/summaryCard')
+    seedCouple()
+    await open('/mais')
+    await press(await screen.findByText('Stories e colagens'))
+    expect(await screen.findByText('💑 Story: treinamos juntos')).toBeTruthy()
+    const buttons = await screen.findAllByText('📤 Compartilhar story')
+    expect(buttons).toHaveLength(2)
 
     buildSummaryCard.mockClear()
-    await tap('📤 Compartilhar o mês')
-    await press(await screen.findByText('📤 Compartilhar o mês (pronto)'))
-    expect(buildSummaryCard).toHaveBeenCalledWith(expect.objectContaining({ title: 'Novembro de 2026' }))
-    expect(shareImage).toHaveBeenCalled()
+    shareImage.mockClear()
+    await press(buttons[0])
+    await waitFor(() => expect(shareImage).toHaveBeenCalledTimes(1))
+    expect(buildSummaryCard).toHaveBeenCalledWith(
+      expect.objectContaining({ format: 'story', highlight: expect.objectContaining({ value: '1' }) }),
+    )
 
-    await tap('🖼️ Compartilhar a colagem de 2026')
-    await waitFor(() => expect(buildSummaryCard).toHaveBeenCalledWith(expect.objectContaining({ title: 'Nosso 2026', columns: 4 })))
+    await press(screen.getAllByText('📤 Compartilhar story')[1])
+    await waitFor(() => expect(shareImage).toHaveBeenCalledTimes(2))
+    expect(buildSummaryCard).toHaveBeenLastCalledWith(expect.objectContaining({ title: 'Novembro de 2026', format: 'story' }))
+
+    await tap('📤 Compartilhar colagem')
+    await waitFor(() => expect(shareImage).toHaveBeenCalledTimes(3))
+    expect(buildSummaryCard).toHaveBeenLastCalledWith(expect.objectContaining({ title: 'Nosso 2026', columns: 4, format: 'story' }))
+
+    // Mês sem treinos: nada para compartilhar.
+    await press(screen.getByLabelText('Mês anterior'))
+    expect(await screen.findByText('Ainda não há treino a dois neste mês.')).toBeTruthy()
+    expect(screen.getByText('Nenhum treino neste mês.')).toBeTruthy()
+  })
+
+  it('mostra o erro na tela se a imagem falhar', async () => {
+    const { buildSummaryCard } = jest.requireMock('@/lib/summaryCard')
+    buildSummaryCard.mockRejectedValueOnce(new Error('sem memória'))
+    jest.spyOn(console, 'warn').mockImplementation(() => undefined)
+    seedCouple()
+    await open('/compartilhar')
+    await press((await screen.findAllByText('📤 Compartilhar story'))[0])
+    expect(await screen.findByText('Não consegui compartilhar: sem memória')).toBeTruthy()
+  })
+})
+
+describe('Exceção com resposta do parceiro', () => {
+  const pending = (over: Record<string, unknown> = {}) => ({
+    id: 'e1',
+    group_id: 'g1',
+    user_id: 'u2',
+    day: '2026-11-19',
+    reason: 'doenca',
+    note: 'Gripe',
+    created_at: '2026-11-18T14:00:00Z', // hoje, 11h em Brasília
+    reviewed_by: null,
+    reviewed_at: null,
+    ...over,
+  })
+
+  it('o parceiro recusa no Início e o feed mostra a recusa', async () => {
+    const fake = seedCouple()
+    fake.db.exceptions = [pending()]
+    await open('/')
+    expect(await screen.findByText('Exceção esperando a sua resposta')).toBeTruthy()
+    await press(screen.getAllByText('✕ Recusar')[0])
+    await type(await screen.findByLabelText('Motivo (opcional)'), 'Te vi na academia')
+    await press(screen.getByText('Recusar exceção'))
+    await waitFor(() => expect(fake.db.exceptions).toHaveLength(0))
+    expect(fake.db.exception_rejections[0]).toMatchObject({ author_id: 'u2', rejected_by: 'u1', why: 'Te vi na academia' })
+
+    await open('/feed')
+    expect(await screen.findByText(/Motivo: “Te vi na academia”/)).toBeTruthy()
+
+    // Ana não consegue marcar o mesmo dia de novo.
+    fake.login('u2', 'Ana')
+    await open('/excecoes')
+    await press(await screen.findByText('19/11'))
+    await tap('Doença')
+    await tap('Marcar exceção')
+    expect((await screen.findAllByText(/recusou a exceção desse dia/)).length).toBeGreaterThan(0)
+    expect(fake.db.exceptions).toHaveLength(0)
+  })
+
+  it('aprova; quem marcou vê "aguardando"; depois do dia não dá mais para responder', async () => {
+    const fake = seedCouple()
+    fake.db.exceptions = [pending()]
+    await open('/excecoes')
+    await press((await screen.findAllByText('✓ Aprovar'))[0])
+    await waitFor(() => expect(fake.db.exceptions[0].reviewed_by).toBe('u1'))
+    expect(await screen.findByText('✓ Aprovada por Rafael')).toBeTruthy()
+
+    // Exceção minha, marcada hoje: espera o parceiro.
+    fake.db.exceptions = [pending({ id: 'e2', user_id: 'u1' })]
+    await open('/excecoes')
+    expect(await screen.findByText(/Aguardando o parceiro até 23h59/)).toBeTruthy()
+
+    // Marcada ontem: o prazo acabou e ela vale.
+    fake.db.exceptions = [pending({ id: 'e3', created_at: '2026-11-17T14:00:00Z' })]
+    await open('/excecoes')
+    expect(await screen.findByText(/Ana/)).toBeTruthy()
+    expect(screen.queryByText('✕ Recusar')).toBeNull()
+  })
+})
+
+describe('Roleta de prêmios', () => {
+  it('ganha um giro com 2 semanas seguidas, gira e marca como aproveitado', async () => {
+    const fake = seedCouple()
+    const met = (week_start: string, user_id: string) => ({ ...fake.db.week_results[0], week_id: 'w-' + week_start, week_start, user_id, met: true, owes: false })
+    fake.db.week_results.push(met('2026-10-26', 'u1'), met('2026-10-26', 'u2'), met('2026-11-02', 'u1'), met('2026-11-02', 'u2'))
+    await open('/')
+    await press(await screen.findByText('🎁 Vocês ganharam um giro na roleta de prêmios!'))
+    expect(await screen.findByText('Vocês ganharam um giro!')).toBeTruthy()
+    await press(screen.getByText('🎰 Girar a roleta'))
+    expect(await screen.findByText('Vocês ganharam')).toBeTruthy()
+    // Só o prêmio ativo pode sair.
+    expect(fake.db.reward_spins[0]).toMatchObject({ week_start: '2026-11-02', reward_text: 'Massagem de 20 minutos', spun_by: 'u1' })
+
+    await press(await screen.findByText('Marcar aproveitado'))
+    expect(await screen.findByText('✓ Aproveitado')).toBeTruthy()
+    expect(fake.db.reward_spins[0].redeemed_at).toBeTruthy()
+  })
+
+  it('sem giro mostra quanto falta e deixa cadastrar prêmio', async () => {
+    const fake = seedCouple()
+    await open('/premios')
+    expect(await screen.findByText('Faltam 2 semanas para o próximo giro')).toBeTruthy()
+    await press(screen.getByText('+ Novo'))
+    await type(await screen.findByLabelText('Prêmio'), 'Jantar japonês')
+    await tap('Salvar')
+    expect(await screen.findByText('Jantar japonês')).toBeTruthy()
+    expect(fake.db.rewards.at(-1)).toMatchObject({ description: 'Jantar japonês', group_id: 'g1' })
+  })
+})
+
+describe('Planejar a semana e "vamos?"', () => {
+  it('marca o dia e o período, aparece no Início, e chama o parceiro', async () => {
+    const fake = seedCouple()
+    await open('/planejar')
+    await press(await screen.findByLabelText('Vou treinar 18/11'))
+    await waitFor(() => expect(fake.db.workout_plans).toHaveLength(1))
+    await press(await screen.findByLabelText('Tarde 18/11'))
+    await waitFor(() => expect(fake.db.workout_plans[0]).toMatchObject({ user_id: 'u1', day: '2026-11-18', period: 'tarde' }))
+
+    await open('/')
+    expect(await screen.findByText('Você: Tarde')).toBeTruthy()
+    expect(screen.getByText('Ana: Sem plano')).toBeTruthy()
+    await press(screen.getByText('💪 Vamos?'))
+    await waitFor(() => expect(fake.db.nudges).toHaveLength(1))
+    expect(fake.db.nudges[0]).toMatchObject({ from_user: 'u1', to_user: 'u2' })
+  })
+
+  it('mostra o "vamos?" recebido e some depois de responder', async () => {
+    const fake = seedCouple()
+    fake.db.nudges = [{ id: 'n1', group_id: 'g1', from_user: 'u2', to_user: 'u1', created_at: '2026-11-18T14:30:00Z', seen_at: null }]
+    await open('/')
+    expect(await screen.findByText('💪 Ana chamou: bora treinar?')).toBeTruthy()
+    await press(screen.getByText('Agora não'))
+    await waitFor(() => expect(fake.db.nudges[0].seen_at).toBeTruthy())
+    await waitFor(() => expect(screen.queryByText('💪 Ana chamou: bora treinar?')).toBeNull())
+  })
+
+  it('antes da atualização do banco, o Início abre normal e as telas novas avisam', async () => {
+    const fake = seedCouple()
+    for (const t of ['workout_plans', 'nudges', 'rewards', 'reward_spins', 'exception_rejections']) fake.missingTables.add(t)
+    await open('/')
+    expect(await screen.findByText('Faltam 2 em 4 dias')).toBeTruthy()
+    expect(screen.queryByText('Plano de hoje')).toBeNull()
+    await open('/premios')
+    expect(await screen.findByText(/depois que a atualização do banco for aplicada/)).toBeTruthy()
   })
 })
 

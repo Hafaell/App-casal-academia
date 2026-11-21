@@ -3,13 +3,15 @@ import { FlatList, Image, Pressable, View } from 'react-native'
 import { useGroup } from '@/providers/GroupProvider'
 import { Avatar, Button, Card, EmptyState, Input, PageHeader, PhotoViewer, Sheet, Spinner, Txt, confirmAsync, memberColor, useToast } from '@/components/ui'
 import { formatDistance } from '@domain/geo'
-import { useCheckins, useDeleteCheckin, useExceptions, useJokers, usePhotoUrls, useReact, useReactions, useReportCheckin, useReports, useWeekResults, useWeeks } from '@/data/queries'
-import type { Checkin, CheckinReport, ExceptionDay, Joker, Reaction, Week, WeekResult } from '@/data/types'
+import { useCheckins, useDeleteCheckin, useExceptionRejections, useExceptions, useJokers, usePhotoUrls, useReact, useReactions, useReportCheckin, useReports, useWeekResults, useWeeks } from '@/data/queries'
+import type { Checkin, CheckinReport, ExceptionDay, ExceptionRejection, Joker, Reaction, Week, WeekResult } from '@/data/types'
 import { addDays, dayMonth, localDate, localTime, mondayOf, weekRange, weekdayShort } from '@domain/dates'
 import { CHECKIN_KINDS, REACTION_EMOJIS, summarizeReactions, type ReactionEmoji } from '@domain/reactions'
 import { findTogether } from '@domain/together'
 import { EXCEPTION_REASONS, formatMoney } from '@domain/rules'
-import { buildSummaryCard, shareImage, type SummaryCard } from '@/lib/summaryCard'
+import type { SummaryCardData } from '@/lib/summaryCard'
+import { ShareImageButton } from '@/components/ShareImageButton'
+import { ExceptionReviewBar } from '@/components/ExceptionReview'
 import { errorMessage } from '@/lib/supabase'
 import { alpha, colors } from '@/lib/theme'
 
@@ -19,6 +21,7 @@ type FeedItem =
   | { type: 'joker'; at: string; data: Joker }
   | { type: 'week'; at: string; data: Week }
   | { type: 'report'; at: string; data: CheckinReport }
+  | { type: 'rejection'; at: string; data: ExceptionRejection }
 
 const PAGE_DAYS = 45
 
@@ -33,6 +36,7 @@ export function FeedScreen() {
   const weeks = useWeeks(group.id)
   const results = useWeekResults(group.id)
   const reports = useReports(group.id, from)
+  const rejections = useExceptionRejections(group.id, from)
   const photos = usePhotoUrls([...(checkins.data ?? []).map((c) => c.photo_path), ...(reports.data ?? []).map((r) => r.photo_path)])
   const reactions = useReactions(group.id, (checkins.data ?? []).map((c) => c.id))
   const together = useMemo(() => findTogether(checkins.data ?? []).checkinIds, [checkins.data])
@@ -47,15 +51,16 @@ export function FeedScreen() {
       ...(jokers.data ?? []).filter((j) => j.week_start >= from).map((j) => ({ type: 'joker' as const, at: j.created_at, data: j })),
       ...(weeks.data ?? []).filter((w) => w.week_start >= from).map((w) => ({ type: 'week' as const, at: w.closed_at, data: w })),
       ...(reports.data ?? []).map((r) => ({ type: 'report' as const, at: r.created_at, data: r })),
+      ...(rejections.data ?? []).map((r) => ({ type: 'rejection' as const, at: r.created_at, data: r })),
     ]
     return list.sort((a, b) => b.at.localeCompare(a.at))
-  }, [checkins.data, exceptions.data, jokers.data, weeks.data, reports.data, from])
+  }, [checkins.data, exceptions.data, jokers.data, weeks.data, reports.data, rejections.data, from])
 
   const loading = checkins.isLoading || exceptions.isLoading
 
   async function refresh() {
     setRefreshing(true)
-    await Promise.all([checkins.refetch(), exceptions.refetch(), jokers.refetch(), weeks.refetch(), results.refetch(), reports.refetch()])
+    await Promise.all([checkins.refetch(), exceptions.refetch(), jokers.refetch(), weeks.refetch(), results.refetch(), reports.refetch(), rejections.refetch()])
     setRefreshing(false)
   }
 
@@ -77,6 +82,8 @@ export function FeedScreen() {
         return <ExceptionCard exception={item.data} />
       case 'report':
         return <ReportCard report={item.data} url={photos.data?.get(item.data.photo_path)} />
+      case 'rejection':
+        return <RejectionCard rejection={item.data} />
       case 'joker':
         return <JokerCard joker={item.data} />
       case 'week':
@@ -351,7 +358,27 @@ function ExceptionCard({ exception }: { exception: ExceptionDay }) {
         <Txt size={12} muted>
           marcado em {dayMonth(localDate(exception.created_at, group.timezone))}
         </Txt>
+        <ExceptionReviewBar exception={exception} />
       </View>
+    </Card>
+  )
+}
+
+/** Exceção recusada pelo parceiro: fica o aviso, a justificativa e o motivo da recusa. */
+function RejectionCard({ rejection }: { rejection: ExceptionRejection }) {
+  const { nameOf } = useGroup()
+  return (
+    <Card style={{ borderColor: alpha(colors.danger, 0.3), backgroundColor: alpha(colors.danger, 0.05) }}>
+      <Txt size={14}>
+        ✕ <Txt size={14} weight="700">{nameOf(rejection.rejected_by ?? '')}</Txt> recusou a exceção de{' '}
+        <Txt size={14} weight="700">{nameOf(rejection.author_id ?? '')}</Txt> ({EXCEPTION_REASONS[rejection.reason]},{' '}
+        {weekdayShort(rejection.day)} {dayMonth(rejection.day)}). O dia volta a contar na meta.
+      </Txt>
+      {rejection.why ? (
+        <Txt size={14} muted style={{ marginTop: 4 }}>
+          Motivo: “{rejection.why}”
+        </Txt>
+      ) : null}
     </Card>
   )
 }
@@ -380,47 +407,24 @@ function WeekCard({
   photoUrls?: Map<string, string>
 }) {
   const { nameOf, members } = useGroup()
-  const toast = useToast()
-  const [sharing, setSharing] = useState(false)
-  const [card, setCard] = useState<SummaryCard | null>(null)
-  const [viewingCard, setViewingCard] = useState(false)
   const owing = results.filter((r) => r.owes)
 
-  // Toque 1: monta a imagem (demora, por causa das fotos). Toque 2: compartilha.
-  async function prepare() {
-    setSharing(true)
-    try {
-      const end = addDays(week.week_start, 6)
-      const photos = checkins
-        .filter((c) => c.day >= week.week_start && c.day <= end)
-        .map((c) => photoUrls?.get(c.photo_path))
-        .filter((u): u is string => Boolean(u))
-      setCard(
-        await buildSummaryCard({
-          title: 'Treino a Dois',
-          subtitle: `Semana ${weekRange(week.week_start)}`,
-          photos,
-          lines: results.map((r) => ({
-            name: nameOf(r.user_id),
-            color: memberColor(members.findIndex((m) => m.user_id === r.user_id)),
-            text: `${r.checkins}/${r.goal}${r.met ? ' ✓' : r.used_joker ? ' 🃏' : ''}`,
-          })),
-          footer: owing.length === 0 ? 'Ninguém foi punido 💪' : `Caixinha: ${formatMoney(week.fine_amount ?? 0)}`,
-        }),
-      )
-    } catch (err) {
-      toast(errorMessage(err), 'error')
-    } finally {
-      setSharing(false)
-    }
-  }
-
-  async function share() {
-    if (!card) return
-    try {
-      if (!(await shareImage(card))) setViewingCard(true)
-    } catch (err) {
-      toast(errorMessage(err), 'error')
+  function buildCard(): SummaryCardData {
+    const end = addDays(week.week_start, 6)
+    const photos = checkins
+      .filter((c) => c.day >= week.week_start && c.day <= end)
+      .map((c) => photoUrls?.get(c.photo_path))
+      .filter((u): u is string => Boolean(u))
+    return {
+      title: 'Treino a Dois',
+      subtitle: `Semana ${weekRange(week.week_start)}`,
+      photos,
+      lines: results.map((r) => ({
+        name: nameOf(r.user_id),
+        color: memberColor(members.findIndex((m) => m.user_id === r.user_id)),
+        text: `${r.checkins}/${r.goal}${r.met ? ' ✓' : r.used_joker ? ' 🃏' : ''}`,
+      })),
+      footer: owing.length === 0 ? 'Ninguém foi punido 💪' : `Caixinha: ${formatMoney(week.fine_amount ?? 0)}`,
     }
   }
 
@@ -440,10 +444,7 @@ function WeekCard({
       <Txt size={12} muted style={{ marginTop: 4 }}>
         {results.map((r) => `${nameOf(r.user_id)} ${r.checkins}/${r.goal}${r.used_joker ? ' 🃏' : ''}`).join(' · ')}
       </Txt>
-      <Button variant="ghost" style={{ marginTop: 8 }} textStyle={{ color: colors.accent }} onPress={card ? share : prepare} loading={sharing}>
-        {sharing ? 'Preparando…' : card ? '📤 Compartilhar' : '🖼️ Montar cartão da semana'}
-      </Button>
-      <PhotoViewer url={viewingCard ? (card?.uri ?? null) : null} caption="Imagem da semana" onClose={() => setViewingCard(false)} />
+      <ShareImageButton label="📤 Compartilhar a semana" dialogTitle="Compartilhar a semana" build={buildCard} />
     </Card>
   )
 }
